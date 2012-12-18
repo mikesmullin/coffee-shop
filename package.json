@@ -1,0 +1,23 @@
+{
+  "name": "coffee-shop",
+  "version": "0.1.0",
+  "description": "Coffee Web Framework.",
+  "main": "bin/shop",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mikesmullin/coffee-shop.git"
+  },
+  "keywords": [
+    "web",
+    "framework"
+  ],
+  "author": "Mike Smullin <mike@smullindesign.com>",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "dependencies": {
+    "coffee-script": "~1.4.0"
+  }
+}
