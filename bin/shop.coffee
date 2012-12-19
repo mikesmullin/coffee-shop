@@ -68,6 +68,10 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       'gaze': '>=0.3.0'
       'growl': '>=1.6.1'
       'mkdirp': '>=0.3.4'
+      'coffee-templates': 'http://github.com/mikesmullin/coffee-templates/tarball/production'
+      'coffee-stylesheets': 'http://github.com/mikesmullin/coffee-stylesheets/tarball/production'
+      'coffee-sprites': 'http://github.com/mikesmullin/coffee-sprites/tarball/production'
+      #'coffee-assets': 'http://github.com/mikesmullin/coffee-assets/tarball/production'
     scripts:
       test: 'echo "Error: no test specified" && exit 1'
       start: 'node server.js'

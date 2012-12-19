@@ -1,6 +1,7 @@
 # CoffeeShop
 
 ```bash
-npm install coffee-shop -g
+sudo apt-get install nodejs
+sudo npm install coffee-shop -g
 shop new <project>
 ```
