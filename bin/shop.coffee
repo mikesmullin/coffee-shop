@@ -38,18 +38,51 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
         cb abspath
     dirs
 
-  fs.mkdirSync target
-  console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}"
+  mkdir = (dir) ->
+    fs.mkdirSync target+'/'+dir
+    console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{dir}"
+
+  write = (file, contents) ->
+    fs.writeFileSync target+'/'+file, contents
+    console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{file}"
+
+  mkdir '' # target dir
   walk skeleton, (file, dir) ->
     if dir
-      dir = dir.substr skeleton.length+1
-      fs.mkdirSync target+'/'+dir
-      console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{dir}"
+      mkdir dir.substr skeleton.length+1
     else if file
       infile = file
       file = file.substr skeleton.length+1
-      fs.writeFileSync target+'/'+file, fs.readFileSync infile, 'utf8'
-      console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{file}"
+      write file, fs.readFileSync infile, 'utf8'
+
+  write 'package.json', JSON.stringify
+    name: name
+    version: '0.0.1'
+    description: ''
+    main: 'server.js'
+    dependencies:
+      express: '>=3.0.4'
+    devDependencies:
+      'coffee-script': '>=1.4.0'
+      'mocha': '>=0.0.1'
+      'gaze': '>=0.3.0'
+      'growl': '>=1.6.1'
+    scripts:
+      test: 'echo "Error: no test specified" && exit 1'
+      start: 'node server.js'
+    repository: ''
+    author: ''
+    license: ''
+
+  child_process = require 'child_process'
+  shell = (cmd, cb) ->
+    child_process.exec cmd, (err, stdout, stderr) ->
+      if err then console.log err
+      if stderr then console.log stderr
+      if stdout then console.log stdout
+      cb() if not stderr and not err and typeof cb is 'function'
+
+  shell "cd #{target} && npm install"
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
