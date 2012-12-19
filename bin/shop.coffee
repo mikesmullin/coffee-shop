@@ -19,56 +19,37 @@ task 'help', 'see this help information', ->
     console.log "  #{task.name}: #{task.description}"
   console.log ''
 
-task 'new', 'create new application skeleton', (root) ->
+task 'new', 'copy new empty application skeleton to given directory', (name) ->
+  skeleton = __dirname+'/../skeleton'
+  target = process.cwd()+'/'+name
   fs = require 'fs'
-  root = process.cwd()+'/'+root
-  directories = [
-    ''
-    'precompile'
-    'precompile/assets'
-    'precompile/assets/behaviors'
-    'precompile/assets/behaviors/test'
-    'precompile/assets/images'
-    'precompile/assets/stylesheets'
-    'precompile/controllers'
-    'precompile/controllers/server'
-    'precompile/controllers/shared'
-    'precompile/models'
-    'precompile/models/server'
-    'precompile/models/shared'
-    'precompile/vendor'
-    'precompile/vendor/assets'
-    'precompile/vendor/assets/behaviors'
-    'precompile/vendor/assets/stylesheets'
-    'precompile/views'
-    'precompile/views/server'
-    'precompile/views/shared'
-    'static'
-    'static/app'
-    'static/app/controllers'
-    'static/app/models'
-    'static/app/views'
-    'static/db'
-    'static/public'
-    'static/public/assets'
-    'static/public/uploads'
-    'static/public/downloads'
-    'static/public/fonts'
-  ]
-  for i, dir of directories
-    fs.mkdirSync root+'/'+dir+'/'
-    console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{dir}"
+  path = require 'path'
 
-  files = [
-    'precompile/index.coffee'
-    'precompile/server.coffee'
-    'Cakefile'
-    'loop'
-    'README.md'
-  ]
-  for i, file of files
-    fs.writeFileSync root+'/'+file, ''
-    console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{file}"
+  walk = (base, cb) ->
+    items = fs.readdirSync base
+    dirs = []
+    for i, item of items
+      abspath = base+'/'+item
+      if fs.statSync(abspath).isDirectory()
+        dirs.push abspath
+        cb null, abspath
+        walk abspath, cb
+      else
+        cb abspath
+    dirs
+
+  fs.mkdirSync target
+  console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}"
+  walk skeleton, (file, dir) ->
+    if dir
+      dir = dir.substr skeleton.length+1
+      fs.mkdirSync target+'/'+dir
+      console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{dir}"
+    else if file
+      infile = file
+      file = file.substr skeleton.length+1
+      fs.writeFileSync target+'/'+file, fs.readFileSync infile, 'utf8'
+      console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{file}"
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
