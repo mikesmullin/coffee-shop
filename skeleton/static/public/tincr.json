@@ -1,0 +1,22 @@
+{
+   "toFile":[
+      {
+         "from":"/js/(.+\\.js)",
+         "to":"/js/$1"
+      },
+      {
+         "from":"/css/(.+\\.css)",
+         "to":"/css/$1"
+      }
+   ],
+   "fromFile":[
+      {
+         "from":"/js/$1",
+         "to":"/js/(.+\\.js)"
+      },
+      {
+         "from":"/css/$1",
+         "to":"/css/(.+\\.css)"
+      }
+   ]
+}
