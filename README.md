@@ -1,5 +1,6 @@
 # CoffeeShop
 
 ```bash
-bin/shop help
+npm install coffee-shop -g
+shop new <project>
 ```
