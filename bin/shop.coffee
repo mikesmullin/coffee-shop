@@ -67,6 +67,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       'mocha': '>=0.0.1'
       'gaze': '>=0.3.0'
       'growl': '>=1.6.1'
+      'mkdirp': '>=0.3.4'
     scripts:
       test: 'echo "Error: no test specified" && exit 1'
       start: 'node server.js'
@@ -80,9 +81,10 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       if err then console.log err
       if stderr then console.log stderr
       if stdout then console.log stdout
-      cb() if not stderr and not err and typeof cb is 'function'
+      cb() if not err and typeof cb is 'function'
 
-  shell "cd #{target} && npm install"
+  shell "cd #{target} && npm install", ->
+    console.log "done! next steps:\n\ncd #{name}\ncake start\ngoogle-chrome http://localhost:3000/"
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
