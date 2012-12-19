@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Coffee Web Framework.",
   "main": "bin/shop",
+  "bin": { "shop": "./bin/shop" },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
