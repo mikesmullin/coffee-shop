@@ -1,138 +1,146 @@
+growl         = require 'growl'
+gaze          = require 'gaze'
 child_process = require 'child_process'
-path = require 'path'
-mkdirp = require 'mkdirp'
+fs            = require 'fs'
+path          = require 'path'
+mkdirp        = require 'mkdirp'
+assets        = require 'coffee-assets'
 
+notify = (title, msg, err = false, show = true) ->
+  console.log "#{title}: #{msg}"
+  growl msg, image: (if err then 'emblem-important' else 'emblem-default'), title: title if show
+
+watch = ->
+  a = arguments
+  cb = a[a.length-1]
+  if a.length is 2
+    globs = [ in: [''], out: '' ]
+    suffix = a[0]
+  else if a.length is  3
+    globs = a[0]
+    suffix = a[1]
+  for k, glob of globs
+    glob.in = [ glob.in ] if typeof glob.in is 'string'
+    for kk of glob.in
+      ((glob)->
+        notify 'Cake Gaze', "watching #{glob.in+glob.suffix}", false, false
+        gaze glob.in+glob.suffix, (err, watcher) ->
+          notify 'Cake Gaze', err, true, false if err
+          @on 'changed', (file) ->
+            relout = path.join(glob.out, path.relative(path.join(process.cwd(), glob.in), file))
+            cb file, relout
+      )(in: glob.in[kk], out: glob.out, suffix: glob.suffix or suffix)
+
+write = (file, data, cb) ->
+  mkdirp.sync path.dirname file
+  fs.writeFile file, data, 'utf8', (err) ->
+    if err
+      notify 'Cake', "unable to write #{file}. #{err}", true, true
+    else
+      notify 'Cake', "wrote #{file}"
+      cb() if typeof cb is 'function'
+
+node_child = null
+restart_node = -> node_child.kill() if node_child?
+start_node = ->
+  last_start = new Date()
+  node_child = child_process.spawn 'node', ['server.js']
+  node_child.stdout.on 'data', (out) ->
+    notify 'Cake Node', ''+ out, true, false
+  node_child.stderr.on 'data', (err) ->
+    notify 'Cake Node', ''+ err, true, true
+  node_child.on 'exit', (code) ->
+    uptime = (new Date()-last_start)
+    notify 'Cake Node', "node server died with uptime: #{uptime}sec", false, false
+    if uptime < 2*1000
+      notify 'Cake Node', 'due to short uptime, 15sec to restart...', false, false
+      setTimeout start_node, 15*1000 # wait 5 sec before trying again
+    else
+      start_node()
+  notify 'Cake Node', 'spawned node server.', false, false
+
+
+# tasks
 task 'start', 'start main process loop', ->
-
-  watch = (glob, cb) ->
-    require('gaze') glob, (err, watcher) ->
-      console.log err if err
-      @on 'changed', cb
-
-  relative_basepath = (file) ->
-    file.replace new RegExp('^' + __dirname + '/'), './'
-
-  absolute_outfile = (file, path_from, path_to, ext_from, ext_to) ->
-    file = file.replace new RegExp('^' + __dirname + path_from), __dirname + path_to
-    file.replace new RegExp('.' + ext_from + '$'), '.' + ext_to
-
-  shell = (cmd, cb) ->
-    console.log "executing: #{cmd}"
-    child_process.exec cmd, (err, stdout, stderr) ->
-      if err
-        console.log err
-        notify 'Cakefile precompile shell', ''+ err + stdout, true
-      if stderr
-        notify 'Cakefile precompile shell', stderr, true
-      if stdout
-        console.log stdout
-      if not stderr and not err
-        cb() if typeof cb is 'function'
-
-  precompile = (glob, from_path, to_path, from_ext, to_ext, cmd) ->
-    watch glob, (infile) ->
-      outfile = absolute_outfile infile, from_path, to_path, from_ext, to_ext
-      mkdirp.sync path.dirname relative_basepath outfile
-      shell "#{cmd} #{path.dirname relative_basepath outfile} #{relative_basepath infile}", ->
-        notify 'Cakefile precompile', "compiled #{relative_basepath outfile}."
-
-  notify = (title, msg, err = false) ->
-    console.log msg
-    require('growl') msg, image: (if err then 'emblem-important' else 'emblem-default'), title: title
-
-  watch 'Cakefile', (file) ->
-    notify 'Cakefile', 'Cakefile changed.'
-    node_child.kill() if node_child?
+  watch 'Cakefile', ->
+    notify 'Cake', 'Cakefile changed.', false, true
+    restart_node()
     process.exit 0
 
-  precompile 'precompile/controllers/server/**/*.coffee', '/precompile/controllers/server/', '/static/app/controllers/', 'coffee', 'js',
-    'node_modules/coffee-script/bin/coffee --bare --output'
+  # CoffeeScripts
+  watch [
+      in: 'precompile'
+      suffix: '/server.js.coffee'
+      out: ''
+    ,
+      in: 'precompile/controllers/server'
+      out: 'static/app/controllers'
+    ,
+      in: 'precompile/controllers/shared'
+      out:  'static/public/assets/controllers'
+    ,
+      in: 'precompile/models/server'
+      out: 'static/app/models'
+    ,
+      in: 'precompile/models/shared'
+      out: 'static/public/assets/models'
+    ,
+      in: [
+        'precompile/assets/behaviors'
+        'precompile/vendor/assets'
+      ]
+      out: 'static/public/assets'
+  ], '/**/*.{js,js.coffee}', (infile, outfile) ->
+    assets.precompile infile, assets.compiler(), (err, compiled) ->
+      return notify 'Cake CoffeeAssets CoffeeScript compiler', err, true, true if err
+      write outfile.replace(/\.coffee$/,''), compiled
 
-  precompile 'precompile/controllers/shared/**/*.coffee', '/precompile/controllers/shared/', '/static/public/js/controllers/', 'coffee', 'js',
-    'node_modules/coffee-script/bin/coffee --bare --output'
+  # CoffeeStylesheets
+  watch [
+    in: [
+      'precompile/assets/stylesheets'
+      'precompile/vendor/assets'
+    ],
+    out: 'static/public/assets'
+  # filenames with underscore prefix are only compiled via require
+  ], '/**/!(@(_))*.{css,css.coffee}', (infile, outfile) ->
+    assets.precompile infile, assets.compiler(
+      stylesheet_options:
+        format: true
+      sprite_options:
+        image_path: 'precompile/assets/sprites/'
+        sprite_path: 'static/public/assets/'
+        sprite_url: '/assets/'
+    ), (err, compiled) ->
+      return notify 'Cake CoffeeAssets CoffeeStylesheets compiler', err, true, true if err
+      write outfile.replace(/\.coffee/,''), compiled
 
-  precompile 'precompile/models/server/**/*.coffee', '/precompile/models/server/', '/static/app/models/', 'coffee', 'js',
-    'node_modules/coffee-script/bin/coffee --bare --output'
+  # CoffeeTemplates (server-side; single function per file)
+  watch [
+    in: 'precompile/views/server'
+    out: 'static/app/views'
+  ], '/**/*.html.coffee', (infile, outfile) ->
+    assets.precompile infile, assets.compiler(
+      template_options:
+        format: true
+    ), (err, compiled) ->
+      return notify 'Cake CoffeeAssets CoffeeTemplates compiler', err, true, true if err
+      write outfile.replace(/\.html.coffee/,'.js'), compiled
 
-  precompile 'precompile/models/shared/**/*.coffee', '/precompile/models/shared/', '/static/public/assets/models/', 'coffee', 'js',
-    'node_modules/coffee-script/bin/coffee --bare --output'
+  # CoffeeTemplates (client-side; multi-function aggregated to single file)
+  watch 'precompile/views/shared/**/*.html.coffee', ->
+    # if ANY template file changes, ALL must be recompiled
+    # because they are aggregated into a single templates.js file and function()
+    assets.precompile_templates 'precompile/views/shared', {
+      template_options:
+        format: true
+    }, (err, compiled) ->
+      return notify 'Cake CoffeeAssets CoffeeTemplates compiler', err, true, true if err
+      write 'static/public/assets/templates.js', compiled
 
-  watch 'precompile/{assets,views/shared}/**/*.{js,js.coffee,coffee,css,css.styl,styl}', (infile) ->
-    f = ->
-      shell './mincer', ->
-        notify 'Mincer precompile', "compiled assets in response to change in #{relative_basepath infile}."
-        # auto-recompile index.coffee if any application.js changes
-        compile_coffeecup 'precompile/index.coffee', 'static/public/index.html', true
-        compile_coffeecup 'precompile/views/shared/users/login.coffee', 'static/app/views/users/login.js', false
+  # JavaScripts
+  watch 'static/app/**/*.js', ->
+    notify 'Cake Gaze', 'static .js changed. restarting node...', false, false
+    restart_node()
 
-    if relative_basepath(infile).substr(0, 26) is './precompile/views/shared/'
-      # compile shared views to static/app/views/*.js in coffeecup js format
-      outfile = absolute_outfile infile, '/precompile/views/shared/', '/static/app/views/', 'coffee', 'js',
-      outfile # not sure why this is necessary but it does without it
-      compile_coffeecup infile, outfile, false, f
-    else
-      f()
-
-  require_without_cache = (file) ->
-    delete require.cache[file]
-    require file
-
-  compile_coffeecup = (infile, outfile, render, cb) ->
-    fs = require 'fs'
-    fs.readFile infile, 'utf8', (err, str) ->
-      return console.log err if err
-      hardcode = require_without_cache __dirname + '/precompile/views/server/helpers/application.coffee'
-      hardcode.manifest = require_without_cache __dirname + '/static/public/assets/manifest.json'
-      try
-        tpl = require('coffeecup')[if render then 'render' else 'compile'] str,
-          format: true
-          stylus: require 'stylus'
-          hardcode: hardcode
-      catch err
-        node_child.kill()
-        notify 'Coffeecup precompile', '' + err, true
-        throw err
-      mkdirp.sync path.dirname relative_basepath outfile
-      fs.writeFile outfile, (if render then '' else 'module.exports=') + tpl, (err) ->
-        return console.log err if err
-        notify 'Coffeecup precompile', 'compiled ' + outfile
-        cb() if typeof cb is 'function'
-
-  watch 'precompile/index.coffee', (infile) ->
-    compile_coffeecup 'precompile/index.coffee', 'static/public/index.html'
-
-  watch 'precompile/views/server/**/*.coffee', (infile) ->
-    outfile = absolute_outfile infile, '/precompile/views/server/', '/static/app/views/', 'coffee', 'js'
-    compile_coffeecup infile, outfile
-
-  precompile 'precompile/server.coffee', '/precompile/', '/', 'coffee', 'js',
-    'node_modules/coffee-script/bin/coffee --bare --output'
-
-  # TODO: need to make it so when the files are deleted, then they get deleted from static, as well
-  #       or just remember that public/assets is disposable
-  #       and only track server-side js that goes under static/app
-  #       and make a tmp:clear task for deleting public/assets
-
-  # TODO: need to make a separate cakefile task for minify, gzip in-place
-  #       for static/public/assets, which can be executed by hand when packaging production
-
-  # TODO: when new files are added or renamed, need to restart gaze
-
-  console.log 'watching .'
-
-  node_child = null
-  f1 = ->
-    node_child = child_process.spawn 'node', ['server.js'] #, ->
-    node_child.stdout.on 'data', (out) ->
-      console.log ''+ out
-    node_child.stderr.on 'data', (err) ->
-      notify 'node server', ''+ err, true
-    node_child.on 'exit', (code) ->
-      console.log 'node server died.'
-      f1()
-    console.log 'spawned node server.'
-  watch '**/*.js', (file) ->
-    if node_child?
-      console.log '.js changed.'
-      node_child.kill()
-  f1()
+  start_node()
