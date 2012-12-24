@@ -55,7 +55,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       file = file.substr skeleton.length+1
       write file, fs.readFileSync infile, 'utf8'
 
-  write 'package.json', JSON.stringify
+  pack =
     name: name
     version: '0.0.1'
     description: ''
@@ -78,6 +78,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     repository: ''
     author: ''
     license: ''
+  write 'package.json', JSON.stringify pack, null, 2
 
   child_process = require 'child_process'
   shell = (cmd, cb) ->
