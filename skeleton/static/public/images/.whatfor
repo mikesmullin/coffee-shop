@@ -1,0 +1,6 @@
+images that did not require any pre-processing before they
+will be delivered to client i.e., non-sprite images
+this way static/public/assets can easily be deleted and regenerated
+without any second thoughts or duplicate copies
+(e.g. in rails you would have the image files located in app/assets
+as well as public/assets)

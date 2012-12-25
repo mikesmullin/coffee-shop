@@ -1,0 +1,4 @@
+third-party assets
+for client-side (or server-side)
+usually one sub-directory per library
+may include .js, .js.coffee, .css., .css.coffee, images, etc.
