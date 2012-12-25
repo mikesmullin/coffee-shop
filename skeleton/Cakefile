@@ -6,8 +6,10 @@ path          = require 'path'
 mkdirp        = require 'mkdirp'
 assets        = require 'coffee-assets'
 
-notify = (title, msg, err = false, show = true) ->
-  console.log "#{title}: #{msg}"
+_t = {}; i = 0; colors = [ '\u001b[33m', '\u001b[34m', '\u001b[35m', '\u001b[36m', '\u001b[31m', '\u001b[32m', '\u001b[1m\u001b[33m', '\u001b[1m\u001b[34m', '\u001b[1m\u001b[35m', '\u001b[1m\u001b[36m', '\u001b[1m\u001b[31m', '\u001b[1m\u001b[32m' ]
+notify = (title, msg, err, show) ->
+  _t[title] = i++ if typeof _t[title] is 'undefined'
+  console.log "#{colors[_t[title]]}#{title}:\u001b[0m #{msg.replace(/[\r\n]+$/, '')}"
   growl msg, image: (if err then 'emblem-important' else 'emblem-default'), title: title if show
 
 watch = ->
@@ -23,21 +25,21 @@ watch = ->
     glob.in = [ glob.in ] if typeof glob.in is 'string'
     for kk of glob.in
       ((glob)->
-        notify 'Cake Gaze', "watching #{glob.in+glob.suffix}", false, false
+        notify 'gaze', "watching #{glob.in+glob.suffix}", false, false
         gaze glob.in+glob.suffix, (err, watcher) ->
-          notify 'Cake Gaze', err, true, false if err
+          notify 'gaze', err, true, false if err
           @on 'changed', (file) ->
             relout = path.join(glob.out, path.relative(path.join(process.cwd(), glob.in), file))
             cb file, relout
       )(in: glob.in[kk], out: glob.out, suffix: glob.suffix or suffix)
 
-write = (file, data, cb) ->
+write = (who, file, data, cb) ->
   mkdirp.sync path.dirname file
   fs.writeFile file, data, 'utf8', (err) ->
     if err
-      notify 'Cake', "unable to write #{file}. #{err}", true, true
+      notify who, "unable to write #{file}. #{err}", true, true
     else
-      notify 'Cake', "wrote #{file}"
+      notify who, "wrote #{file}"
       cb() if typeof cb is 'function'
 
 node_child = null
@@ -45,25 +47,25 @@ restart_node = -> node_child.kill() if node_child?
 start_node = ->
   last_start = new Date()
   node_child = child_process.spawn 'node', ['server.js']
-  node_child.stdout.on 'data', (out) ->
-    notify 'Cake Node', ''+ out, true, false
-  node_child.stderr.on 'data', (err) ->
-    notify 'Cake Node', ''+ err, true, true
+  node_child.stdout.on 'data', (stdout) ->
+    notify 'node', ''+stdout
+  node_child.stderr.on 'data', (stderr) ->
+    notify 'node', ''+stderr
   node_child.on 'exit', (code) ->
     uptime = (new Date()-last_start)
-    notify 'Cake Node', "node server died with uptime: #{uptime}sec", false, false
+    notify 'node', "node server died (uptime: #{uptime/1000}sec)", false, false
     if uptime < 2*1000
-      notify 'Cake Node', 'due to short uptime, 15sec to restart...', false, false
+      notify 'node', 'due to short uptime, 15sec to restart...', false, false
       setTimeout start_node, 15*1000 # wait 5 sec before trying again
     else
       start_node()
-  notify 'Cake Node', 'spawned node server.', false, false
+  notify 'node', 'spawned new server instance', false, false
 
 
 # tasks
 task 'start', 'start main process loop', ->
   watch 'Cakefile', ->
-    notify 'Cake', 'Cakefile changed.', false, true
+    notify 'cake', 'Cakefile changed.', false, true
     restart_node()
     process.exit 0
 
@@ -90,10 +92,11 @@ task 'start', 'start main process loop', ->
         'precompile/vendor/assets'
       ]
       out: 'static/public/assets'
-  ], '/**/*.{js,js.coffee}', (infile, outfile) ->
+  # filenames with underscore prefix are only compiled via #= require directive
+  ], '/**/!(@(_))*.{js,js.coffee}', (infile, outfile) ->
     assets.precompile infile, assets.compiler(), (err, compiled) ->
-      return notify 'Cake CoffeeAssets CoffeeScript compiler', err, true, true if err
-      write outfile.replace(/\.coffee$/,''), compiled
+      return notify 'coffeescript', err, true, true if err
+      write 'coffeescript', outfile.replace(/\.coffee$/,''), compiled
 
   # CoffeeStylesheets
   watch [
@@ -102,7 +105,7 @@ task 'start', 'start main process loop', ->
       'precompile/vendor/assets'
     ],
     out: 'static/public/assets'
-  # filenames with underscore prefix are only compiled via require
+  # filenames with underscore prefix are only compiled via #= require directive
   ], '/**/!(@(_))*.{css,css.coffee}', (infile, outfile) ->
     assets.precompile infile, assets.compiler(
       stylesheet_options:
@@ -112,35 +115,37 @@ task 'start', 'start main process loop', ->
         sprite_path: 'static/public/assets/'
         sprite_url: '/assets/'
     ), (err, compiled) ->
-      return notify 'Cake CoffeeAssets CoffeeStylesheets compiler', err, true, true if err
-      write outfile.replace(/\.coffee/,''), compiled
+      return notify 'coffeestylesheets', err, true, true if err
+      write 'coffeestylesheets', outfile.replace(/\.coffee/,''), compiled
 
   # CoffeeTemplates (server-side; single function per file)
   watch [
     in: 'precompile/views/server'
     out: 'static/app/views'
-  ], '/**/*.html.coffee', (infile, outfile) ->
+  # filenames with underscore prefix are only compiled via #= require directive
+  ], '/**/!(@(_))*.html.coffee', (infile, outfile) ->
     assets.precompile infile, assets.compiler(
       template_options:
         format: true
     ), (err, compiled) ->
-      return notify 'Cake CoffeeAssets CoffeeTemplates compiler', err, true, true if err
-      write outfile.replace(/\.html.coffee/,'.js'), compiled
+      return notify 'coffeetemplates', err, true, true if err
+      write 'coffeetemplates', outfile.replace(/\.html.coffee/,'.js'), compiled
 
   # CoffeeTemplates (client-side; multi-function aggregated to single file)
-  watch 'precompile/views/shared/**/*.html.coffee', ->
+  # filenames with underscore prefix are only compiled via #= require directive
+  watch 'precompile/views/shared/**/!(@(_))*.html.coffee', ->
     # if ANY template file changes, ALL must be recompiled
     # because they are aggregated into a single templates.js file and function()
     assets.precompile_templates 'precompile/views/shared', {
       template_options:
         format: true
     }, (err, compiled) ->
-      return notify 'Cake CoffeeAssets CoffeeTemplates compiler', err, true, true if err
-      write 'static/public/assets/templates.js', compiled
+      return notify 'coffeetemplates', err, true, true if err
+      write 'coffeetemplates', 'static/public/assets/templates.js', compiled
 
   # JavaScripts
   watch 'static/app/**/*.js', ->
-    notify 'Cake Gaze', 'static .js changed. restarting node...', false, false
+    notify 'gaze', 'static .js changed. restarting node', false, false
     restart_node()
 
   start_node()
