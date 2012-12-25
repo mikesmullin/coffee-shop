@@ -90,7 +90,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       cb() if not err and typeof cb is 'function'
 
   shell "cd #{target} && npm install", ->
-    console.log "done! next steps:\n\ncd #{name}\ncake start\ngoogle-chrome http://localhost:3000/"
+    console.log "done! next steps:\n\ncd #{name}\nbash loop cake start"
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
