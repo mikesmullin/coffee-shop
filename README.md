@@ -12,6 +12,13 @@ sudo npm install coffee-shop -g
 shop new <project>
 ```
 
+## Related
+
+* [CoffeeAssets](https://github.com/mikesmullin/coffee-assets)
+* [CoffeeTemplates](https://github.com/mikesmullin/coffee-templates)
+* [CoffeeStylesheets](https://github.com/mikesmullin/coffee-stylesheets)
+* [CoffeeSprites](https://github.com/mikesmullin/coffee-sprites)
+
 ## Credits
 
 Sponsored by [Smullin Design](http://www.smullindesign.com/).
