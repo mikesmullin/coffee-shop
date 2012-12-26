@@ -126,7 +126,7 @@ task 'start', 'start main process loop', ->
   ], '/**/!(@(_))*.html.coffee', (infile, outfile) ->
     assets.precompile infile, assets.compiler(
       template_options:
-        format: true
+        format: false
     ), (err, compiled) ->
       return notify 'coffeetemplates', err, true, true if err
       write 'coffeetemplates', outfile.replace(/\.html.coffee/,'.js'), compiled
@@ -138,7 +138,8 @@ task 'start', 'start main process loop', ->
     # because they are aggregated into a single templates.js file and function()
     assets.precompile_templates 'precompile/views/shared', {
       template_options:
-        format: true
+        format: false
+        common_helpers: true
     }, (err, compiled) ->
       return notify 'coffeetemplates', err, true, true if err
       write 'coffeetemplates', 'static/public/assets/templates.js', compiled
