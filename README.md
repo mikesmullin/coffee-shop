@@ -8,6 +8,7 @@ Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/
 
 ```bash
 sudo apt-get install nodejs
+sudo apt-get install libgd2-xpm-dev # on ubuntu; a coffee-sprites/libgd dependency
 sudo npm install coffee-shop -g
 shop new <project>
 ```
