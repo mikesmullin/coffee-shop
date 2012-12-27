@@ -9,7 +9,13 @@ app = express()
 # CoffeeTemplates.__express
 app.response._render = app.response.render
 app.response.render = (name, options, cb) ->
+  options = options or {}
   options.view = name
+  options.layout =
+    if options.layout
+      'shared/layouts/'+options.layout
+    else
+      'shared/layouts/application'
   if name.indexOf('server/') is 0
     name = 'app/views/templates'
   else # shared
