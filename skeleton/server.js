@@ -1,4 +1,4 @@
-var app, express, sugar;
+var app, express, fs, sugar;
 
 process.env.ROOT = __dirname + '/static/';
 
@@ -8,13 +8,44 @@ process.env.PORT = 3001;
 
 sugar = require('sugar');
 
+fs = require('fs');
+
 express = require('express');
 
 app = express();
 
-app.engine('html', function(path, options, cb) {
-  return fs.readFile(path, 'utf8', function(err, str) {
-    return cb(err, str);
+app.response._render = app.response.render;
+
+app.response.render = function(name, options, cb) {
+  options.view = name;
+  if (name.indexOf('server/') === 0) {
+    name = 'app/views/templates';
+  } else {
+    name = 'public/assets/templates';
+  }
+  return this._render(name, options, cb);
+};
+
+app.set('view engine', 'js');
+
+app.set('views', process.env.ROOT);
+
+app.engine('js', function(path, options, cb) {
+  var render;
+  render = function(str) {
+    eval('templates=' + str);
+    return cb(null, templates(options.view, options));
+  };
+  return fs.readFile(path, 'utf8', function(err, templates) {
+    if (path.indexOf('static/app/views/templates.js') !== -1) {
+      return fs.readFile(process.env.ROOT + 'public/assets/templates.js', 'utf8', function(err, shared_templates) {
+        templates = templates.split("\n");
+        templates.splice(-2, 0, shared_templates.split("\n").slice(2, -2).join("\n"));
+        return render(templates.join("\n"));
+      });
+    } else {
+      return render(templates);
+    }
   });
 });
 
