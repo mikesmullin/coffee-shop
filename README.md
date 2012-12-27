@@ -10,7 +10,7 @@ Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/
 # install node.js and npm
 sudo apt-get install nodejs
 
-# install CoffeeSprite/node-canvas dependencies
+# install CoffeeSprites/node-canvas dependencies
 # for specifics, see: https://github.com/LearnBoost/node-canvas/wiki/_pages
 sudo apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++ # ubuntu only
 
