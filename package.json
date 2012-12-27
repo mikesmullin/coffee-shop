@@ -1,6 +1,6 @@
 {
   "name": "coffee-shop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Coffee Web Framework.",
   "main": "bin/shop",
   "bin": { "shop": "./bin/shop" },
