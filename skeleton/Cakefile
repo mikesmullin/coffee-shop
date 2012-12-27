@@ -114,7 +114,7 @@ task 'start', 'start main process loop', ->
   # filenames with underscore prefix are only compiled via #= require directive
   ], '/**/!(@(_))*.{css,css.coffee}', (infile, outfile) ->
     assets.precompile infile, assets.compiler(
-      stylesheet_options:
+      render_options:
         format: true
       sprite_options:
         image_path: 'precompile/assets/sprites/'
@@ -134,9 +134,15 @@ task 'start', 'start main process loop', ->
   ], '/**/*.html.coffee', (infile, outfile, inpath, outpath) ->
     # if ANY template file changes, ALL must be recompiled
     # because they are aggregated into a single templates.js file and function()
-    assets.precompile_templates 'precompile/views/shared', {
-      template_options:
-        format: false
+    assets.precompile_all inpath, {
+      render_options:
+        format: true
+        globals:
+          content_for: (s,f) ->
+            @block 'content_for '+JSON.stringify(s), f
+          yields: (s) ->
+            @block 'yields '+JSON.stringify(s), ->
+      compile_options:
         common_helpers: true
     }, (err, compiled) ->
       return notify 'coffeetemplates', err, true, true if err
