@@ -16,6 +16,13 @@ app.response.render = (name, options, cb) ->
       'shared/layouts/'+options.layout
     else
       'shared/layouts/application'
+  app_helper = require process.env.ROOT+'app/helpers/application'
+  for k of app_helper
+    ((f)->
+      options[k] = ->
+        cb = arguments[arguments.length-1]
+        cb f.apply null, arguments
+    )(app_helper[k])
   if name.indexOf('server/') is 0
     name = 'app/views/templates'
   else # shared

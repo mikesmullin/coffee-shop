@@ -1,0 +1,6 @@
+function anonymous(n,g) {
+var o="",c={},content_for=function(s,f){c[s]=f},yields=function(s){if(c[s])c[s]()},each=function(o,f){for(var k in o)if(o.hasOwnProperty(k))f.apply(o[k],[k,o[k]])};with(g||{}){var partial=function(n,g){with(g||{}){var w=function(f,a){o="";f.apply(g, a);return o},t={}
+t["shared/pages/home"]=function(){return "<p>Welcome to CoffeeShop!</p>\n"}
+t["shared/layouts/application"]=function(){return "<!doctype html>\n<!--[if IE7]>\n  <html class=\"no-js ie7\" lang=\"en\"></html>\n<![endif]-->\n<!--[if IE8]>\n  <html class=\"no-js ie8\" lang=\"en\"></html>\n<![endif]-->\n<!--[if IE9]>\n  <html class=\"no-js ie9\" lang=\"en\"></html>\n<![endif]-->\n<!--[if gt IE9]>\n  <html class=\"no-js\" lang=\"en\">\n<![endif]-->\n  <head>\n    <title>CoffeeShop</title>\n    <meta charset=\"utf-8\"/>\n    <link rel=\"stylesheet\" href=\"/assets/application.css\"/>\n    <link rel=\"icon\" type=\"image/x-icon\" href=\"favicon.ico\"/>\n    <!--[if lt IE9]>\n      <script src=\"//html5shiv.googlecode.com/svn/trunk/html5.js\"><"+"/script>\n    <![endif]-->\n    "+w(yields,["head"])+"\n  </head>\n  <body>\n    "+w(yields,["content"])+"\n    <script src=\"/assets/application.js\"></script>\n    "+w(yields,["foot"])+"\n  </body>\n</html>\n"}
+o+=t[n]()}}}partial(n,g);if(g.layout){var l=o;c["content"]=function(){o+=l};o="";partial(g.layout,g)}return o
+}

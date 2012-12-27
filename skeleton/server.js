@@ -17,9 +17,20 @@ app = express();
 app.response._render = app.response.render;
 
 app.response.render = function(name, options, cb) {
+  var app_helper, k, _fn;
   options = options || {};
   options.view = name;
   options.layout = options.layout ? 'shared/layouts/' + options.layout : 'shared/layouts/application';
+  app_helper = require(process.env.ROOT + 'app/helpers/application');
+  _fn = function(f) {
+    return options[k] = function() {
+      cb = arguments[arguments.length - 1];
+      return cb(f.apply(null, arguments));
+    };
+  };
+  for (k in app_helper) {
+    _fn(app_helper[k]);
+  }
   if (name.indexOf('server/') === 0) {
     name = 'app/views/templates';
   } else {
