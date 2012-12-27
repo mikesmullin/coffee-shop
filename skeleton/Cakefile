@@ -30,7 +30,7 @@ watch = ->
           notify 'gaze', err, true, false if err
           @on 'changed', (file) ->
             relout = path.join(glob.out, path.relative(path.join(process.cwd(), glob.in), file))
-            cb file, relout
+            cb file, relout, glob.in, glob.out
       )(in: glob.in[kk], out: glob.out, suffix: glob.suffix or suffix)
 
 write = (who, file, data, cb) ->
@@ -87,6 +87,12 @@ task 'start', 'start main process loop', ->
       in: 'precompile/models/shared'
       out: 'static/public/assets/models'
     ,
+      in: 'precompile/helpers/server'
+      out: 'static/app/helpers'
+    ,
+      in: 'precompile/helpers/shared'
+      out: 'static/public/assets/helpers'
+    ,
       in: [
         'precompile/assets/behaviors'
         'precompile/vendor/assets'
@@ -118,22 +124,14 @@ task 'start', 'start main process loop', ->
       return notify 'coffeestylesheets', err, true, true if err
       write 'coffeestylesheets', outfile.replace(/\.coffee/,''), compiled
 
-  # CoffeeTemplates (server-side; single function per file)
+  # CoffeeTemplates
   watch [
-    in: 'precompile/views/server'
-    out: 'static/app/views'
-  # filenames with underscore prefix are only compiled via #= require directive
-  ], '/**/!(@(_))*.html.coffee', (infile, outfile) ->
-    assets.precompile infile, assets.compiler(
-      template_options:
-        format: false
-    ), (err, compiled) ->
-      return notify 'coffeetemplates', err, true, true if err
-      write 'coffeetemplates', outfile.replace(/\.html.coffee/,'.js'), compiled
-
-  # CoffeeTemplates (client-side; multi-function aggregated to single file)
-  # filenames with underscore prefix are only compiled via #= require directive
-  watch 'precompile/views/shared/**/!(@(_))*.html.coffee', ->
+      in: 'precompile/views/server'
+      out: 'static/app/views'
+    ,
+      in: 'precompile/views/shared'
+      out: 'static/public/assets'
+  ], '/**/*.html.coffee', (infile, outfile, inpath, outpath) ->
     # if ANY template file changes, ALL must be recompiled
     # because they are aggregated into a single templates.js file and function()
     assets.precompile_templates 'precompile/views/shared', {
@@ -142,7 +140,7 @@ task 'start', 'start main process loop', ->
         common_helpers: true
     }, (err, compiled) ->
       return notify 'coffeetemplates', err, true, true if err
-      write 'coffeetemplates', 'static/public/assets/templates.js', compiled
+      write 'coffeetemplates', outpath+'/templates.js', compiled
 
   # JavaScripts
   watch 'static/app/**/*.js', ->
