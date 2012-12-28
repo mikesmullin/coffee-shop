@@ -16,6 +16,8 @@ Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/
     (5:17:54 PM) Mike: and i was sad to discover that efforts like TowerJS.org which set out to replace rails with a node solution became bloated and slow just like rails, because they kept the implementation strategies the same
     (5:19:07 PM) Mike: so i started blazing my own trails with coffee-* libs with a bias toward performance, minimalism, and the #1 goal everyone who moves to node.js for a web framework wants--portability/reusability of front-end and back-end code
 
+See also: http://gilesbowkett.blogspot.com/2012/02/rails-went-off-rails-why-im-rebuilding.html
+
 ## Install
 
 ```bash
