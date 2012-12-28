@@ -72,6 +72,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       'coffee-templates': '>=0.0.1'
       'coffee-stylesheets': '>=0.0.1'
       'coffee-sprites': '>=0.0.1'
+      'coffee-stylesheets-compass-framework': '>=0.0.1'
       'sugar': '>=0.0.1'
     scripts:
       test: 'echo "Error: no test specified" && exit 1'
