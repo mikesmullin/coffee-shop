@@ -18,15 +18,14 @@ Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/
 
 See also: http://gilesbowkett.blogspot.com/2012/02/rails-went-off-rails-why-im-rebuilding.html
 
-## Install
+## Installation on Debian/Ubuntu
 
 ```bash
 # install node.js and npm
 sudo apt-get install nodejs
 
-# install CoffeeSprites/node-canvas dependencies
-# for specifics, see: https://github.com/LearnBoost/node-canvas/wiki/_pages
-sudo apt-get install libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++ # ubuntu only
+# install CoffeeSprites/node-gd dependency
+sudo apt-get install libgd2-xpm-dev # libgd
 
 # install coffee-shop
 sudo npm install coffee-shop -g
