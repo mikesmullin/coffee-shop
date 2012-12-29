@@ -9,8 +9,8 @@ assets        = require 'coffee-assets'
 _t = {}; i = 0; colors = [ '\u001b[33m', '\u001b[34m', '\u001b[35m', '\u001b[36m', '\u001b[31m', '\u001b[32m', '\u001b[1m\u001b[33m', '\u001b[1m\u001b[34m', '\u001b[1m\u001b[35m', '\u001b[1m\u001b[36m', '\u001b[1m\u001b[31m', '\u001b[1m\u001b[32m' ]
 notify = (title, msg, image, err, show) ->
   _t[title] = i++ if typeof _t[title] is 'undefined'
-  msg = msg.stack if err and typeof msg is 'object'
-  console.log "#{colors[_t[title]]}#{title}:\u001b[0m #{msg.replace(/[\r\n]+$/, '')}"
+  msg = msg.stack if err and typeof msg is 'object' and typeof msg.stack isnt 'undefined'
+  console.log "#{colors[_t[title]]}#{title}:\u001b[0m #{msg.toString().replace(/[\r\n]+$/, '')}"
   growl msg, image: process.cwd()+'/node_modules/coffee-assets/images/'+image+'.png', title: title if show
 
 watch = ->
