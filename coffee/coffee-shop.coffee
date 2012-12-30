@@ -92,8 +92,8 @@ module.exports = class CoffeeShop
     skip: _Class::offset # alias
 
     #TODO: improve escape functions
-    escape_key: (s) -> "`#{s.replace(/`/g, '')}`"
-    escape: (s) -> "'"+s.replace(/'/g,"\'")+"'"
+    escape_key: (s) -> "`#{s.toString().replace(/`/g, '')}`"
+    escape: (s) -> "'"+s.toString().replace(/'/g,"\'")+"'"
     toString: -> @toSql()
     toSql: ->
       "SELECT\n #{@_select.join(",\n ")}\n"+
@@ -110,6 +110,7 @@ module.exports = class CoffeeShop
   @Model: class extends CoffeeShop.Table # like ActiveRecord
     constructor: ->
       super()
+      @id = null
       @table @constructor.name.pluralize().toLowerCase()
       @_non_attributes = {}
       for k of _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save'.split ' '
@@ -126,7 +127,9 @@ module.exports = class CoffeeShop
 
     execute_sql: (sql, cb) ->
       # db-proprietary; overridable
-      app.db.exec sql, cb
+      #app.db.exec sql, cb
+      console.log "would have executed sql:", sql
+      cb null
     all: (cb) ->
       @execute_sql @toSql(), cb
     first: (cb) ->
@@ -145,7 +148,21 @@ module.exports = class CoffeeShop
           attrs[k] = @[k]
       return attrs
     save: (cb) ->
-      sql = "#{if @[@_primary_key] then 'UPDATE' else 'INSERT INTO'} #{escape_key @_table} "+
-        "() VALUES\n"+
-        " ("+@_records.join("),\n (")+");"
+      attrs = @attributes()
+      if @[@_primary_key]
+        pairs = []
+        for k, v of attrs when not (k is @_primary_key)
+          pairs.push "#{@escape_key k} = #{@escape v}"
+        sql = "UPDATE #{@escape_key @_table}\n"+
+          "SET #{pairs.join(', ')}\n"+
+          "WHERE #{@escape_key @_primary_key} = #{@escape @[@_primary_key]};"
+      else
+        names = []
+        values = []
+        for k, v of attrs when not (k is @_primary_key)
+          names.push @escape_key k
+          values.push @escape v
+        sql = "INSERT INTO #{@escape_key @_table} "+
+          "(#{names.join(', ')}) VALUES\n"+
+          "(#{values.join(', ')});"
       @execute_sql sql, cb

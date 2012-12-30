@@ -155,11 +155,11 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.skip = _Class.prototype.offset;
 
     _Class.prototype.escape_key = function(s) {
-      return "`" + (s.replace(/`/g, '')) + "`";
+      return "`" + (s.toString().replace(/`/g, '')) + "`";
     };
 
     _Class.prototype.escape = function(s) {
-      return "'" + s.replace(/'/g, "\'") + "'";
+      return "'" + s.toString().replace(/'/g, "\'") + "'";
     };
 
     _Class.prototype.toString = function() {
@@ -181,6 +181,7 @@ module.exports = CoffeeShop = (function() {
     function _Class() {
       var k, _ref;
       _Class.__super__.constructor.call(this);
+      this.id = null;
       this.table(this.constructor.name.pluralize().toLowerCase());
       this._non_attributes = {};
       for (k in _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save'.split(' ')) {
@@ -214,7 +215,8 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.validates_presence_of = function() {};
 
     _Class.prototype.execute_sql = function(sql, cb) {
-      return app.db.exec(sql, cb);
+      console.log("would have executed sql:", sql);
+      return cb(null);
     };
 
     _Class.prototype.all = function(cb) {
@@ -252,8 +254,30 @@ module.exports = CoffeeShop = (function() {
     };
 
     _Class.prototype.save = function(cb) {
-      var sql;
-      sql = ("" + (this[this._primary_key] ? 'UPDATE' : 'INSERT INTO') + " " + (escape_key(this._table)) + " ") + "() VALUES\n" + " (" + this._records.join("),\n (") + ");";
+      var attrs, k, names, pairs, sql, v, values;
+      attrs = this.attributes();
+      if (this[this._primary_key]) {
+        pairs = [];
+        for (k in attrs) {
+          v = attrs[k];
+          if (!(k === this._primary_key)) {
+            pairs.push("" + (this.escape_key(k)) + " = " + (this.escape(v)));
+          }
+        }
+        sql = ("UPDATE " + (this.escape_key(this._table)) + "\n") + ("SET " + (pairs.join(', ')) + "\n") + ("WHERE " + (this.escape_key(this._primary_key)) + " = " + (this.escape(this[this._primary_key])) + ";");
+      } else {
+        names = [];
+        values = [];
+        for (k in attrs) {
+          v = attrs[k];
+          if (!(!(k === this._primary_key))) {
+            continue;
+          }
+          names.push(this.escape_key(k));
+          values.push(this.escape(v));
+        }
+        sql = ("INSERT INTO " + (this.escape_key(this._table)) + " ") + ("(" + (names.join(', ')) + ") VALUES\n") + ("(" + (values.join(', ')) + ");");
+      }
       return this.execute_sql(sql, cb);
     };
 

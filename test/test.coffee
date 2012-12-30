@@ -5,6 +5,9 @@ describe 'CoffeeShop', ->
   describe 'Object-Relational Mapping', ->
     user = `undefined`
     sql = `undefined`
+    _expecting = `undefined`
+    expecting = (s) ->
+      _expecting = s
 
     beforeEach ->
       class User extends CoffeeShop.Model
@@ -15,20 +18,17 @@ describe 'CoffeeShop', ->
           return
 
       user = new User()
-
-    _expecting = ''
-    expecting = (s) ->
-      _expecting = s
+      _expecting = `undefined`
 
     afterEach ->
-      if _expecting
-        #console.log sql
-        #console.log JSON.stringify sql
-        assert.equal sql, _expecting
-        _expecting = ''
-      else if not _expecting is false
-        console.log JSON.stringify sql
-        #console.log sql
+      if _expecting isnt false
+        if _expecting
+          #console.log sql
+          #console.log JSON.stringify sql
+          assert.equal sql, _expecting
+        else
+          console.log JSON.stringify sql
+          #console.log sql
 
     it 'can select single argument word', ->
       sql = user.select('first').toSql()
@@ -91,3 +91,28 @@ describe 'CoffeeShop', ->
       o = user.attributes()
       assert.deepEqual {"id":1,"first_name":"bob","last_name":"anderson"}, o
       _expecting = false
+
+    it 'can build insert statement from model attributes', (done) ->
+      #user.id = null
+      user.first_name = 'bob'
+      user.last_name = 'anderson'
+      user.execute_sql = (_sql, cb) ->
+        sql = _sql
+        cb null
+      user.save (err) ->
+        done()
+      expecting "INSERT INTO `users` (`first_name`, `last_name`) VALUES\n('bob', 'anderson');"
+
+    it 'can build update statement from model attributes', (done) ->
+      user.id = 1
+      user.first_name = 'bob'
+      user.last_name = 'anderson'
+      user.execute_sql = (_sql, cb) ->
+        sql = _sql
+        cb null
+      user.save (err) ->
+        done()
+      expecting "UPDATE `users`\nSET `first_name` = 'bob', `last_name` = 'anderson'\nWHERE `id` = '1';"
+
+    it 'can update_attributes, automatically validating and saving'
+    it 'can update_column, without validating or saving'
