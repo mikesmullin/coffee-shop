@@ -10,8 +10,6 @@ describe 'CoffeeShop', ->
       class User extends CoffeeShop.Model
         constructor: ->
           @table 'users'
-          @has_one 'credit_card'
-          @has_one 'pet'
           super()
 
       user = new User()
@@ -29,6 +27,11 @@ describe 'CoffeeShop', ->
       else
         console.log JSON.stringify sql
         #console.log sql
+
+    it 'has no enumerable attributes or methods of its own', ->
+      for k of user
+        console.log k
+      assert false, 'stop'
 
     it 'can select single argument word', ->
       sql = user.select('first').toSql()
