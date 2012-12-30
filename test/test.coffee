@@ -35,7 +35,7 @@ describe 'CoffeeShop', ->
       sql = user.select('first', 'last').toSql()
       #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
 
-    it 'can select single argument raw sql', ->
+    it 'can select single argument raw sql string', ->
       sql = user.select('first, last').toSql()
       #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
 
@@ -49,9 +49,21 @@ describe 'CoffeeShop', ->
       sql = scope.join('table2', 'table3').toSql()
       #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
 
-    it 'can join single argument raw sql', ->
+    it 'can join single argument raw sql string', ->
       scope = user.select('*')
       sql = scope.join('LEFT OUTER JOIN table2 ON table1.id = table2.id').toSql()
+      #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
+
+    it 'can where dual argument strings with one or more replacements', ->
+      scope = user.select('*')
+      sql = scope.where("customers.? LIKE 'a%?'", 'last', 'son').toSql()
+      #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
+
+    it 'can where one or more raw sql strings', ->
+      scope = user.select('*')
+      sql = scope.where("customers.first = 'bob'").toSql()
+      console.log sql
+      sql = scope.where("customers.first = 'bob'", "customers.last = 'anderson'").toSql()
       #assert.equal "SELECT\n first,\n [object Arguments]\nFROM users\n;", sql
 
     it 'can where single argument single item object', ->

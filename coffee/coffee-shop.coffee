@@ -3,6 +3,8 @@ sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
 string=(a)->a.length is 1 and sig(a) is 's'
 word=(a)->string(a) and a[0].match(/^\w+$/) isnt null # when arguments = ['word']
 concat=(a,b)->a[k] = b[k] for k of b
+all=(a,t)->sig(a) is (new Array(a.length+1)).join t
+
 
 module.exports = class CoffeeShop
   @Table: class # like Arel
@@ -45,14 +47,27 @@ module.exports = class CoffeeShop
     where: ->
       a = arguments
       s = sig a
-      if s is 's'
-        # "customers.first = 'bob'"
-        @_where.push a[0] # raw sql
-      if s is 'o'
+      if a.length >= 2 and all(a, 's') and a[0].indexOf('?') isnt -1
+        # ["customers.last LIKE 'a%?'", 'son']
+        # ["customers.? LIKE 'a%?'", 'last', 'son']
+        i = 0
+        @_where.push a[0].replace /\?/g, -> a[++i]
+      # decidedly not supporting these use cases
+      # they can be achieved via separate where() calls
+      #if a.length is 1 and sig is 'o' and a[0].length is 2
+      #  # [["customers.last LIKE 'a%?'", 'son']]
+      #  # [["customers.last LIKE 'a%?'", 'son'], ["customers.last LIKE 'a%?'", 'son']]
+      #  # ["customers.first = 'bob'", ["customers.last LIKE 'a%?'", 'son']]
+      #  # ["customers.first = 'bob'", ["customers.middle LIKE '%?%'", 'ert'], ["customers.last LIKE 'a%?'", 'son'], "customers.suffix = 'Jr.'"]
+      else if a.length >= 1 and all(a, 's')
+        # ["customers.first = 'bob'"]
+        # ["customers.first = 'bob'", "customers.last = 'anderson'"]
+        concat @_where, a # raw sql
+      else if s is 'o'
         if a[0].length is `undefined` # hash
-          # { 'customers.first': 'bob' }
-          # { 'customers.first': 'bob', 'customers.last': 'doe' }
-          # { customers: { first: 'bob' } }
+          # [{'customers.first': 'bob'}]
+          # [{'customers.first': 'bob', 'customers.last': 'anderson'}]
+          # [{customers: { first: 'bob'}}]
           r = (o, prefix='') ->
             _r = []
             for k of o
@@ -62,8 +77,6 @@ module.exports = class CoffeeShop
                 _r.push "#{prefix}#{k} = \"#{o[k]}\"" # TODO: escape here
             return _r
           concat @_where, r a[0]
-        else # array
-          # ["customers.first LIKE '%?%'", 'bob']
       @
     #TODO: select, group, having can probably be merged
     group: ->
