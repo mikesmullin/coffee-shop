@@ -1,10 +1,8 @@
 y=(v)->(typeof v)[0] # shorthand typeof
 sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
-string=(a)->a.length is 1 and sig(a) is 's'
-word=(a)->string(a) and a[0].match(/^\w+$/) isnt null # when arguments = ['word']
+word=(s)->y(s) is 's' and s.match(/^\w[\w\d]*$/) isnt null # when arguments = ['word']
 concat=(a,b)->a[k] = b[k] for k of b
 all=(a,t)->sig(a) is (new Array(a.length+1)).join t
-
 
 module.exports = class CoffeeShop
   @Table: class # like Arel
@@ -19,30 +17,34 @@ module.exports = class CoffeeShop
       @_offset = 0
 
     # chainables
-    select: ->
+    project: -> select.apply @, arguments # alias
+    _simple: (n) -> ->
       a = arguments
-      if string a
-        # ['first']
-        # ['first, last']
-        @_select.push a[0] # raw sql
-      else if a.length > 1
-        # ['first', 'last']
-        concat @_select, a
+      if a.length >= 1 and all a, 's'
+        for k of a when word a[k]
+          console.log 'matched word'
+          a[k] = @escape_key a[k]
+        # ['a']
+        # ['a=1']
+        # ['a=1, b=1']
+        # ['a=1', 'b=1']
+        concat this["_#{n}"], a # raw sql
       @
-    # TODO: add alias: joins
+    select: _Class::_simple 'select'
+    joins: -> join.apply @, arguments # alias
+    inclue: -> join.apply @, arguments # alias
     join: ->
       a = arguments
-      if word(a) or a.length > 1
+      if word(a[0]) or a.length > 1
         # ['table2']
         # ['table2', 'table3']
         # TODO: lookup relationship and build query here
         for k of a
-          @_joins.push "JOIN #{a[k]}\n ON 1"
-      else if string a
+          @_joins.push "JOIN #{@escape_key a[k]}\n ON 1"
+      else if y a[0] is 's'
         # ['LEFT OUTER JOIN table2 ON table1.id = table2.id']
         @_joins.push a[0] # raw sql
       @
-    # TODO: add union?
     # TODO: implement OR; use raw sql conditions for now
     where: ->
       a = arguments
@@ -51,14 +53,7 @@ module.exports = class CoffeeShop
         # ["customers.last LIKE 'a%?'", 'son']
         # ["customers.? LIKE 'a%?'", 'last', 'son']
         i = 0
-        @_where.push a[0].replace /\?/g, -> a[++i]
-      # decidedly not supporting these use cases
-      # they can be achieved via separate where() calls
-      #if a.length is 1 and sig is 'o' and a[0].length is 2
-      #  # [["customers.last LIKE 'a%?'", 'son']]
-      #  # [["customers.last LIKE 'a%?'", 'son'], ["customers.last LIKE 'a%?'", 'son']]
-      #  # ["customers.first = 'bob'", ["customers.last LIKE 'a%?'", 'son']]
-      #  # ["customers.first = 'bob'", ["customers.middle LIKE '%?%'", 'ert'], ["customers.last LIKE 'a%?'", 'son'], "customers.suffix = 'Jr.'"]
+        @_where.push a[0].replace /\?/g, => @escape a[++i]
       else if a.length >= 1 and all(a, 's')
         # ["customers.first = 'bob'"]
         # ["customers.first = 'bob'", "customers.last = 'anderson'"]
@@ -68,49 +63,34 @@ module.exports = class CoffeeShop
           # [{'customers.first': 'bob'}]
           # [{'customers.first': 'bob', 'customers.last': 'anderson'}]
           # [{customers: { first: 'bob'}}]
-          r = (o, prefix='') ->
+          r = (o, prefix='') =>
             _r = []
             for k of o
               if typeof o[k] is 'object'
-                concat _r, r o[k], "#{k}."
+                concat _r, r o[k], "#{@escape_key k}."
               else
-                _r.push "#{prefix}#{k} = \"#{o[k]}\"" # TODO: escape here
+                _r.push "#{prefix}#{@escape_key k} = #{@escape o[k]}"
             return _r
           concat @_where, r a[0]
       @
-    #TODO: select, group, having can probably be merged
-    group: ->
-      a = arguments
-      if string a
-        @_group.push a[0] # raw sql
-      else if a.length > 1
-        concat @_group, a
-      @
-    having: ->
-      a = arguments
-      if string a
-        @_having.push a[0] # raw sql
-      else if a.length > 1
-        concat @_having, a
-      @
-    order: ->
-      a = arguments
-      if string a
-        @_order.push a[0] # raw sql
-      else if a.length > 1
-        concat @_order, a
-      @
-    # TODO: add fn aliases: take, skip, project, include
+    group: _Class::_simple 'group'
+    having: _Class::_simple 'having'
+    order: _Class::_simple 'order'
+    take: -> limit.apply @, arguments # alias
     limit: (@_limit) ->
       @
+    skip: -> offset.apply @, arguments # alias
     offset: (@_offset) ->
       @
-    #TODO: add escape function
+
+    #TODO: improve escape functions
+    escape_key: (s) -> "`#{s.replace(/`/g, '')}`"
+    escape: (s) -> "'"+s.replace(/'/g,"\'")+"'"
     toString: -> @toSql()
     toSql: ->
       sql = ''+
         "SELECT\n #{@_select.join(",\n ")}\n"+
-        "FROM #{@_table}\n"+
+        "FROM #{@escape_key @_table}\n"+
         @_joins.join("\n")+
         (if @_where.length then "WHERE\n #{@_where.join(" AND \n ")}\n" else '')+
         (if @_group.length then "GROUP BY #{@_group.join(', ')}\n" else '')+

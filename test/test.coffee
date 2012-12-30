@@ -22,6 +22,8 @@ describe 'CoffeeShop', ->
 
     afterEach ->
       if _expecting
+        console.log sql
+        console.log JSON.stringify sql
         assert.equal _expecting, sql
         _expecting = ''
       else
@@ -30,35 +32,35 @@ describe 'CoffeeShop', ->
 
     it 'can select single argument word', ->
       sql = user.select('first').toSql()
-      expecting "SELECT\n first\nFROM users\n;"
+      expecting "SELECT\n `first`\nFROM `users`\n;"
 
     it 'can select multi argument words', ->
       sql = user.select('first', 'last').toSql()
-      expecting "SELECT\n first,\n last\nFROM users\n;"
+      expecting "SELECT\n `first`,\n `last`\nFROM `users`\n;"
 
     it 'can select single argument raw sql string', ->
       sql = user.select('first, last').toSql()
-      expecting "SELECT\n first, last\nFROM users\n;"
+      expecting "SELECT\n first, last\nFROM `users`\n;"
 
     it 'can join single argument word', ->
       scope = user.select('*')
       sql = scope.join('table2').toSql()
-      expecting "SELECT\n *\nFROM users\nJOIN table2\n ON 1;"
+      expecting "SELECT\n *\nFROM `users`\nJOIN `table2`\n ON 1;"
 
     it 'can join multi argument words', ->
       scope = user.select('*')
       sql = scope.join('table2', 'table3').toSql()
-      expecting "SELECT\n *\nFROM users\nJOIN table2\n ON 1\nJOIN table3\n ON 1;"
+      expecting "SELECT\n *\nFROM `users`\nJOIN `table2`\n ON 1\nJOIN `table3`\n ON 1;"
 
     it 'can join single argument raw sql string', ->
       scope = user.select('*')
       sql = scope.join('LEFT OUTER JOIN table2 ON table1.id = table2.id').toSql()
-      expecting "SELECT\n *\nFROM users\nLEFT OUTER JOIN table2 ON table1.id = table2.id;"
+      expecting "SELECT\n *\nFROM `users`\nLEFT OUTER JOIN table2 ON table1.id = table2.id;"
 
     it 'can where dual argument strings with one or more replacements', ->
       scope = user.select('*')
-      sql = scope.where("customers.? LIKE 'a%?'", 'last', 'son').toSql()
-      expecting "SELECT\n *\nFROM users\nWHERE\n customers.last LIKE 'a%son'\n;"
+      sql = scope.where("customers LIKE ? OR customers LIKE ?", 'son', 'maker').toSql()
+      expecting "SELECT\n *\nFROM `users`\nWHERE\n customers LIKE 'son' OR customers LIKE 'maker'\n;"
 
     it 'can where one or more raw sql strings', ->
       scope = user.select('*')
