@@ -2,6 +2,7 @@ y=(v)->(typeof v)[0] # shorthand typeof
 sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
 string=(a)->a.length is 1 and sig(a) is 's'
 word=(a)->string(a) and a[0].match(/^\w+$/) isnt null # when arguments = ['word']
+concat=(a,b)->a[k] = b[k] for k of b
 
 module.exports = class CoffeeShop
   @Table: class # like Arel
@@ -19,23 +20,50 @@ module.exports = class CoffeeShop
     select: ->
       a = arguments
       if string a
+        # ['first']
+        # ['first, last']
         @_select.push a[0] # raw sql
       else if a.length > 1
-        @_select = @_select.concat a
+        # ['first', 'last']
+        concat @_select, a
       @
-    joins: ->
+    # TODO: add alias: joins
+    join: ->
       a = arguments
-      if word a or a.length > 1 # list of table names
+      if word(a) or a.length > 1
+        # ['table2']
+        # ['table2', 'table3']
         # TODO: lookup relationship and build query here
-        @_joins.push a[0]
+        for k of a
+          @_joins.push "JOIN #{a[k]}\n ON 1"
       else if string a
+        # ['LEFT OUTER JOIN table2 ON table1.id = table2.id']
         @_joins.push a[0] # raw sql
       @
+    # TODO: add union?
+    # TODO: implement OR; use raw sql conditions for now
     where: ->
-      # "orders.name = 'bob'"
-      # ["orders.name LIKE '%?%'", 'bob']
-      # { 'orders.name': 'bob' }
-      # { orders: { name: 'bob' } }
+      a = arguments
+      s = sig a
+      if s is 's'
+        # "customers.first = 'bob'"
+        @_where.push a[0] # raw sql
+      if s is 'o'
+        if a[0].length is `undefined` # hash
+          # { 'customers.first': 'bob' }
+          # { 'customers.first': 'bob', 'customers.last': 'doe' }
+          # { customers: { first: 'bob' } }
+          r = (o, prefix='') ->
+            _r = []
+            for k of o
+              if typeof o[k] is 'object'
+                concat _r, r o[k], "#{k}."
+              else
+                _r.push "#{prefix}#{k} = \"#{o[k]}\"" # TODO: escape here
+            return _r
+          concat @_where, r a[0]
+        else # array
+          # ["customers.first LIKE '%?%'", 'bob']
       @
     #TODO: select, group, having can probably be merged
     group: ->
@@ -43,21 +71,21 @@ module.exports = class CoffeeShop
       if string a
         @_group.push a[0] # raw sql
       else if a.length > 1
-        @_group = @_group.concat a
+        concat @_group, a
       @
     having: ->
       a = arguments
       if string a
         @_having.push a[0] # raw sql
       else if a.length > 1
-        @_having = @_having.concat a
+        concat @_having, a
       @
     order: ->
       a = arguments
       if string a
         @_order.push a[0] # raw sql
       else if a.length > 1
-        @_order = @_order.concat a
+        concat @_order, a
       @
     # TODO: add fn aliases: take, skip, project, include
     limit: (@_limit) ->
@@ -71,6 +99,7 @@ module.exports = class CoffeeShop
         "SELECT\n #{@_select.join(",\n ")}\n"+
         "FROM #{@_table}\n"+
         @_joins.join("\n")+
+        (if @_where.length then "WHERE\n #{@_where.join(" AND \n ")}\n" else '')+
         (if @_group.length then "GROUP BY #{@_group.join(', ')}\n" else '')+
         (if @_order.length then "ORDER BY #{@_order.join(', ')}\n" else '')+
         (if @_having.length then "HAVING #{@_having.join(', ')}\n" else '')+
@@ -80,8 +109,6 @@ module.exports = class CoffeeShop
 
   @Model: class extends CoffeeShop.Table # like ActiveRecord
     constructor: ->
-      console.log "hi. table is #{@_table}"
-      console.log "has_ones: #{@_has_one.join(', ')}"
       super()
     table: (@_table) ->
     _has_one: []
