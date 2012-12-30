@@ -9,8 +9,11 @@ describe 'CoffeeShop', ->
     beforeEach ->
       class User extends CoffeeShop.Model
         constructor: ->
-          @table 'users'
           super()
+          @table 'users'
+          @has_one 'credit_card'
+          @has_one 'pet'
+          return
 
       user = new User()
 
@@ -20,18 +23,13 @@ describe 'CoffeeShop', ->
 
     afterEach ->
       if _expecting
-        console.log sql
-        console.log JSON.stringify sql
-        assert.equal _expecting, sql
+        #console.log sql
+        #console.log JSON.stringify sql
+        assert.equal sql, _expecting
         _expecting = ''
-      else
+      else if not _expecting is false
         console.log JSON.stringify sql
         #console.log sql
-
-    it 'has no enumerable attributes or methods of its own', ->
-      for k of user
-        console.log k
-      assert false, 'stop'
 
     it 'can select single argument word', ->
       sql = user.select('first').toSql()
@@ -68,22 +66,29 @@ describe 'CoffeeShop', ->
     it 'can where one or more raw sql strings', ->
       scope = user.select('*')
       sql = scope.where("customers.first = 'bob'").toSql()
-      assert.equal "SELECT\n *\nFROM users\nWHERE\n customers.first = 'bob'\n;", sql
+      assert.equal sql, "SELECT\n *\nFROM `users`\nWHERE\n customers.first = 'bob'\n;"
       sql = scope.where("customers.first = 'bob'", "customers.last = 'anderson'").toSql()
-      expecting "SELECT\n *\nFROM users\nWHERE\n customers.first = 'bob' AND \n customers.last = 'anderson'\n;"
+      expecting "SELECT\n *\nFROM `users`\nWHERE\n customers.first = 'bob' AND \n customers.last = 'anderson'\n;"
 
     it 'can where single argument single item object', ->
       scope = user.select('*')
       sql = scope.where('customers.first': 'bob').toSql()
-      expecting "SELECT\n *\nFROM users\nWHERE\n customers.first = \"bob\"\n;"
+      expecting "SELECT\n *\nFROM `users`\nWHERE\n customers.first = \'bob\'\n;"
 
     it 'can where single argument multi item object', ->
       scope = user.select('*')
       sql = scope.where('customers.first': 'bob', 'customers.last': 'doe').toSql()
-      expecting "SELECT\n *\nFROM users\nWHERE\n customers.first = \"bob\" AND \n customers.last = \"doe\"\n;"
+      expecting "SELECT\n *\nFROM `users`\nWHERE\n customers.first = 'bob' AND \n customers.last = 'doe'\n;"
 
     it 'can where single argument recursive item object', ->
       scope = user.select('*')
       sql = scope.where(customers: { first: 'bob', last: 'doe' }).toSql()
-      expecting "SELECT\n *\nFROM users\nWHERE\n customers.first = \"bob\" AND \n customers.last = \"doe\"\n;"
+      expecting "SELECT\n *\nFROM `users`\nWHERE\n `customers`.`first` = 'bob' AND \n `customers`.`last` = 'doe'\n;"
 
+    it 'can return a list of attributes', ->
+      user.id = 1
+      user.first_name = 'bob'
+      user.last_name = 'anderson'
+      o = user.attributes()
+      assert.deepEqual {"id":1,"first_name":"bob","last_name":"anderson"}, o
+      _expecting = false
