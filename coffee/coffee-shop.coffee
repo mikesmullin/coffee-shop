@@ -122,7 +122,6 @@ module.exports = class CoffeeShop
     has_and_belongs_to_many: (s) -> @_has_and_belongs_to_many.push s
     belongs_to: (s) -> @_belongs_to.push s
     attr_accessible: ->
-    serialize: ->
     validates_presence_of: ->
 
     execute_sql: (sql, cb) ->
@@ -147,6 +146,8 @@ module.exports = class CoffeeShop
         if typeof @_non_attributes[k] is 'undefined'
           attrs[k] = @[k]
       return attrs
+    serialize: ->
+      JSON.stringify @attributes()
     save: (cb) ->
       attrs = @attributes()
       if @[@_primary_key]

@@ -114,5 +114,12 @@ describe 'CoffeeShop', ->
         done()
       expecting "UPDATE `users`\nSET `first_name` = 'bob', `last_name` = 'anderson'\nWHERE `id` = '1';"
 
+    it 'can serialize model attributes', ->
+      user.id = 1
+      user.first_name = 'bob'
+      user.last_name = 'anderson'
+      sql = user.serialize()
+      expecting "{\"id\":1,\"first_name\":\"bob\",\"last_name\":\"anderson\"}"
+
     it 'can update_attributes, automatically validating and saving'
     it 'can update_column, without validating or saving'

@@ -210,8 +210,6 @@ module.exports = CoffeeShop = (function() {
 
     _Class.prototype.attr_accessible = function() {};
 
-    _Class.prototype.serialize = function() {};
-
     _Class.prototype.validates_presence_of = function() {};
 
     _Class.prototype.execute_sql = function(sql, cb) {
@@ -251,6 +249,10 @@ module.exports = CoffeeShop = (function() {
         }
       }
       return attrs;
+    };
+
+    _Class.prototype.serialize = function() {
+      return JSON.stringify(this.attributes());
     };
 
     _Class.prototype.save = function(cb) {
