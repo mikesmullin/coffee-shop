@@ -1,3 +1,5 @@
+sugar = require 'sugar'
+
 y=(v)->(typeof v)[0] # shorthand typeof
 sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
 word=(s)->y(s) is 's' and s.match(/^\w[\w\d]*$/) isnt null # when arguments = ['word']
@@ -108,6 +110,7 @@ module.exports = class CoffeeShop
   @Model: class extends CoffeeShop.Table # like ActiveRecord
     constructor: ->
       super()
+      @table @constructor.name.pluralize().toLowerCase()
       @_non_attributes = {}
       for k of _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save'.split ' '
         @_non_attributes[_ref[k]] = true

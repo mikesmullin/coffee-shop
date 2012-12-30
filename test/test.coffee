@@ -10,7 +10,6 @@ describe 'CoffeeShop', ->
       class User extends CoffeeShop.Model
         constructor: ->
           super()
-          @table 'users'
           @has_one 'credit_card'
           @has_one 'pet'
           return
