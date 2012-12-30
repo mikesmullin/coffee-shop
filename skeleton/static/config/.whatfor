@@ -1,0 +1,2 @@
+configuration information you want available throughout the entire app
+e.g., database.js.coffee

@@ -2,10 +2,13 @@
   "name": "coffee-shop",
   "version": "0.1.2",
   "description": "Coffee Web Framework.",
-  "main": "bin/shop",
-  "bin": { "shop": "./bin/shop" },
+  "main": "js/coffee-shop.js",
+  "bin": {
+    "shop": "./bin/shop"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "coffee --bare -o js coffee/coffee-shop.coffee",
+    "test": "mocha --reporter spec --bail --ui bdd --colors --compilers coffee:coffee-script --require coffee-script test/test.coffee"
   },
   "repository": {
     "type": "git",
@@ -20,5 +23,8 @@
   "readmeFilename": "README.md",
   "dependencies": {
     "coffee-script": "~1.4.0"
+  },
+  "devDependencies": {
+    "chai": "~1.4.2"
   }
 }
