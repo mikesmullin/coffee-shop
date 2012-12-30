@@ -83,3 +83,4 @@ describe 'CoffeeShop', ->
       scope = user.select('*')
       sql = scope.where(customers: { first: 'bob', last: 'doe' }).toSql()
       expecting "SELECT\n *\nFROM users\nWHERE\n customers.first = \"bob\" AND \n customers.last = \"doe\"\n;"
+

@@ -7,6 +7,8 @@ all=(a,t)->sig(a) is (new Array(a.length+1)).join t
 module.exports = class CoffeeShop
   @Table: class # like Arel
     constructor: (@name) ->
+      @_table: ''
+      @_primary_key: 'id'
       @_select = []
       @_joins = []
       @_where = []
@@ -15,6 +17,9 @@ module.exports = class CoffeeShop
       @_order = []
       @_limit = 0
       @_offset = 0
+
+    table: (@_table) ->
+    primary_key: (@_primary_key) ->
 
     # chainables
     project: -> select.apply @, arguments # alias
@@ -103,26 +108,31 @@ module.exports = class CoffeeShop
   @Model: class extends CoffeeShop.Table # like ActiveRecord
     constructor: ->
       super()
-    table: (@_table) ->
     _has_one: []
-    has_one: (s) ->
-      @_has_one.push s
-    has_many: ->
-    has_and_belongs_to_many: ->
-    belongs_to: ->
-    serialize: ->
+    has_one: (s) -> @_has_one.push s
+    has_many: (s) -> @_has_many.push s
+    has_and_belongs_to_many: (s) -> @_has_and_belongs_to_many.push s
+    belongs_to: (s) -> @_belongs_to.push s
     attr_accesible: ->
+    serialize: ->
     validates_presence_of: ->
 
     execute_sql: (sql, cb) ->
-      # db-proprietary
+      # db-proprietary; overridable
       app.db.exec sql, cb
+    all: (cb) ->
+      @execute_sql @toSql(), cb
+    first: (cb) ->
+      @all (err, results) ->
+        cb results[0]
+    last: (cb) ->
+      @all (err, results) ->
+        cb results[results.length-1]
     find: (id, cb) ->
       @where id: id
-      @execute_sql @toSql(), cb
-    all: ->
-    first: ->
-    last: ->
-    save: ->
-      # ask arel to generate sql
-      # db-proprietary interface goes here
+      @first cb
+    save: (cb) ->
+      sql = "#{if @[@_primary_key] then 'UPDATE' else 'INSERT INTO'} #{escape_key @_table} "+
+        "() VALUES\n"+
+        " ("+@_records.join("),\n (")+");"
+      @execute_sql sql, cb
