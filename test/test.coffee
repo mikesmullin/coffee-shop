@@ -4,6 +4,7 @@ assert = require('chai').assert
 describe 'CoffeeShop', ->
   describe 'Object-Relational Mapping', ->
     user = `undefined`
+    User = `undefined`
     sql = `undefined`
     _expecting = `undefined`
     expecting = (s) ->
@@ -12,9 +13,10 @@ describe 'CoffeeShop', ->
     beforeEach ->
       class User extends CoffeeShop.Model
         constructor: ->
-          super()
-          @has_one 'credit_card'
-          @has_one 'pet'
+          (super)
+          # pending
+          #@has_one 'credit_card'
+          #@has_one 'pet'
           return
 
       user = new User()
@@ -92,6 +94,12 @@ describe 'CoffeeShop', ->
       assert.deepEqual {"id":1,"first_name":"bob","last_name":"anderson"}, o
       _expecting = false
 
+    it 'can build new models, without validating or saving', ->
+      user = User.build first_name: 'bob', last_name: 'anderson'
+      o = user.attributes()
+      assert.deepEqual {"id":null,"first_name":"bob","last_name":"anderson"}, o
+      _expecting = false
+
     it 'can build insert statement from model attributes', (done) ->
       #user.id = null
       user.first_name = 'bob'
@@ -123,3 +131,11 @@ describe 'CoffeeShop', ->
 
     it 'can update_attributes, automatically validating and saving'
     it 'can update_column, without validating or saving'
+
+    it 'can create new models, automatically validating and saving', (done) ->
+      User::execute_sql = (_sql, cb) ->
+        sql = _sql
+        cb null
+      user = User.create first_name: 'bob', last_name: 'anderson', (err, result) ->
+        done()
+      expecting "INSERT INTO `users` (`first_name`, `last_name`) VALUES\n('bob', 'anderson');"

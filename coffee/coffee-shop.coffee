@@ -1,11 +1,5 @@
 sugar = require 'sugar'
 
-y=(v)->(typeof v)[0] # shorthand typeof
-sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
-word=(s)->y(s) is 's' and s.match(/^\w[\w\d]*$/) isnt null # when arguments = ['word']
-concat=(a,b)->a[k] = b[k] for k of b; return
-all=(a,t)->sig(a) is (new Array(a.length+1)).join t
-
 module.exports = class CoffeeShop
   @Table: class # like Arel
     constructor: ->
@@ -113,22 +107,17 @@ module.exports = class CoffeeShop
       @id = null
       @table @constructor.name.pluralize().toLowerCase()
       @_non_attributes = {}
-      for k of _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save'.split ' '
+      for k of _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save mount_uploader validates_uniqueness_of validates_format_of transform_serialize update_attributes update_column after_create build create'.split ' '
         @_non_attributes[_ref[k]] = true
+      @_has_one = []
+      @_has_many = []
+      @_has_and_belongs_to_many = []
+      @_belongs_to = []
+      a = arguments
+      for k of a[0]
+        @[k] = a[0][k]
       return
-    _has_one: []
-    has_one: (s) -> @_has_one.push s
-    has_many: (s) -> @_has_many.push s
-    has_and_belongs_to_many: (s) -> @_has_and_belongs_to_many.push s
-    belongs_to: (s) -> @_belongs_to.push s
-    attr_accessible: ->
-    validates_presence_of: ->
 
-    execute_sql: (sql, cb) ->
-      # db-proprietary; overridable
-      #app.db.exec sql, cb
-      console.log "would have executed sql:", sql
-      cb null
     all: (cb) ->
       @execute_sql @toSql(), cb
     first: (cb) ->
@@ -167,3 +156,38 @@ module.exports = class CoffeeShop
           "(#{names.join(', ')}) VALUES\n"+
           "(#{values.join(', ')});"
       @execute_sql sql, cb
+    @build: (o) ->
+      return instance = new @ o
+    @create: (o, cb) ->
+      instance = new @ o
+      #validate()
+      instance.save cb
+      return instance
+
+    execute_sql: (sql, cb) ->
+      # db-proprietary; overridable
+      # e.g. app.db.exec sql, cb
+      console.log "would have executed sql:", sql
+      console.log "override .execute_sql() function to make it happen for real."
+      cb null
+
+    # pending
+    has_one: (s) -> @_has_one.push s
+    has_many: (s) -> @_has_many.push s
+    has_and_belongs_to_many: (s) -> @_has_and_belongs_to_many.push s
+    belongs_to: (s) -> @_belongs_to.push s
+    attr_accessible: ->
+    validates_presence_of: ->
+    mount_uploader: ->
+    validates_uniqueness_of: ->
+    validates_format_of: ->
+    transform_serialize: ->
+    update_attributes: ->
+    update_column: ->
+    after_create: ->
+
+y=(v)->(typeof v)[0] # shorthand typeof
+sig=(a)->s=''; s+=y(a[k]) for k of a; s # argument signature
+word=(s)->y(s) is 's' and s.match(/^\w[\w\d]*$/) isnt null # when arguments = ['word']
+concat=(a,b)->a[k] = b[k] for k of b; return
+all=(a,t)->sig(a) is (new Array(a.length+1)).join t
