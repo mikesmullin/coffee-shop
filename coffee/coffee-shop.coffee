@@ -163,35 +163,23 @@ module.exports = class CoffeeShop
         cb null, !!result
     save: (cb) ->
       attrs = @attributes()
-      begin = ->
-        if not @[@_primary_key] then insert()
-        else @exists @[@_primary_key], (err, exists) ->
-          if exists then update()
-          else insert()
-          return
-        return
-      update = =>
+      if @[@_primary_key]
         pairs = []
         for k, v of attrs when not (k is @_primary_key)
           pairs.push "#{@escape_key k} = #{@escape v}"
-        execute_sql "UPDATE #{@escape_key @_table}\n"+
+        sql = "UPDATE #{@escape_key @_table}\n"+
           "SET #{pairs.join(', ')}\n"+
           "WHERE #{@escape_key @_primary_key} = #{@escape @[@_primary_key]};"
-        return
-      insert = =>
+      else
         names = []
         values = []
         for k, v of attrs when not (k is @_primary_key)
           names.push @escape_key k
           values.push @escape v
-        execute_sql "INSERT INTO #{@escape_key @_table} "+
+        sql = "INSERT INTO #{@escape_key @_table} "+
           "(#{names.join(', ')}) VALUES\n"+
           "(#{values.join(', ')});"
-        return
-      execute_sql = (sql) =>
-        @execute_sql sql, cb
-      begin()
-      return
+      @execute_sql sql, cb
     @build: (o) ->
       return instance = new @ o
     @create: (o, cb) ->

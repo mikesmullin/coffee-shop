@@ -242,51 +242,31 @@ module.exports = CoffeeShop = (function() {
     };
 
     _Class.prototype.save = function(cb) {
-      var attrs, begin, execute_sql, insert, update,
-        _this = this;
+      var attrs, k, names, pairs, sql, v, values;
       attrs = this.attributes();
-      begin = function() {
-        if (!this[this._primary_key]) {
-          insert();
-        } else {
-          this.exists(this[this._primary_key], function(err, exists) {
-            if (exists) {
-              update();
-            } else {
-              insert();
-            }
-          });
-        }
-      };
-      update = function() {
-        var k, pairs, v;
+      if (this[this._primary_key]) {
         pairs = [];
         for (k in attrs) {
           v = attrs[k];
-          if (!(k === _this._primary_key)) {
-            pairs.push("" + (_this.escape_key(k)) + " = " + (_this.escape(v)));
+          if (!(k === this._primary_key)) {
+            pairs.push("" + (this.escape_key(k)) + " = " + (this.escape(v)));
           }
         }
-        execute_sql(("UPDATE " + (_this.escape_key(_this._table)) + "\n") + ("SET " + (pairs.join(', ')) + "\n") + ("WHERE " + (_this.escape_key(_this._primary_key)) + " = " + (_this.escape(_this[_this._primary_key])) + ";"));
-      };
-      insert = function() {
-        var k, names, v, values;
+        sql = ("UPDATE " + (this.escape_key(this._table)) + "\n") + ("SET " + (pairs.join(', ')) + "\n") + ("WHERE " + (this.escape_key(this._primary_key)) + " = " + (this.escape(this[this._primary_key])) + ";");
+      } else {
         names = [];
         values = [];
         for (k in attrs) {
           v = attrs[k];
-          if (!(!(k === _this._primary_key))) {
+          if (!(!(k === this._primary_key))) {
             continue;
           }
-          names.push(_this.escape_key(k));
-          values.push(_this.escape(v));
+          names.push(this.escape_key(k));
+          values.push(this.escape(v));
         }
-        execute_sql(("INSERT INTO " + (_this.escape_key(_this._table)) + " ") + ("(" + (names.join(', ')) + ") VALUES\n") + ("(" + (values.join(', ')) + ");"));
-      };
-      execute_sql = function(sql) {
-        return _this.execute_sql(sql, cb);
-      };
-      begin();
+        sql = ("INSERT INTO " + (this.escape_key(this._table)) + " ") + ("(" + (names.join(', ')) + ") VALUES\n") + ("(" + (values.join(', ')) + ");");
+      }
+      return this.execute_sql(sql, cb);
     };
 
     _Class.build = function(o) {
@@ -304,7 +284,7 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.execute_sql = function(sql, cb) {
       console.log("would have executed sql:", sql);
       console.log("override .execute_sql() function to make it happen for real.");
-      return cb(null, true);
+      return cb(null);
     };
 
     _Class.prototype["delete"] = function() {};
