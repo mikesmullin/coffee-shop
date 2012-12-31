@@ -87,7 +87,11 @@ module.exports = class CoffeeShop
 
     #TODO: improve escape functions
     escape_key: (s) -> "`#{s.toString().replace(/`/g, '')}`"
-    escape: (s) -> "'"+s.toString().replace(/'/g,"\'")+"'"
+    escape: (s) ->
+      if typeof s is 'undefined' or s is null
+        'NULL'
+      else
+        "'"+s.toString().replace(/'/g,"\'")+"'"
     toString: -> @toSql()
     toSql: ->
       "SELECT\n #{@_select.join(",\n ")}\n"+
@@ -106,7 +110,7 @@ module.exports = class CoffeeShop
       super()
       @id = null
       @table @constructor.name.pluralize().toLowerCase()
-      @_attributes = id: true
+      @_attributes = {}
       @_has_one = []
       @_has_many = []
       @_has_and_belongs_to_many = []
@@ -121,6 +125,7 @@ module.exports = class CoffeeShop
         @_attributes[a[k]] = true
     attributes: ->
       attrs = {}
+      attrs[@_primary_key] = @[@_primary_key]
       for own k of @ when y(@_attributes[k]) isnt 'u'
         attrs[k] = @[k]
       return attrs
@@ -128,35 +133,65 @@ module.exports = class CoffeeShop
       JSON.stringify @attributes()
 
     all: (cb) ->
-      @execute_sql @toSql(), cb
+      @execute_sql @toSql(), (err, records) =>
+        return cb err if err
+        for k of records
+          records[k] = new @constructor records[k]
+        cb null, records
+        return
+      return
     first: (cb) ->
+      @limit 1
       @all (err, results) ->
-        cb results[0]
-    last: (cb) ->
-      @all (err, results) ->
-        cb results[results.length-1]
+        return cb err if err
+        cb null, results[0]
+    # may as well ask for all()
+    #last: (cb) ->
+    #  @limit 1
+    #  @all (err, results) ->
+    #    return cb err if err
+    #    cb null, results[results.length-1]
     find: (id, cb) ->
+      @select '*'
       @where id: id
       @first cb
+    exists: (id, cb) ->
+      conditions = {}
+      conditions[@_primary_key] = id
+      @select('1').where(conditions).limit(1).first (err, result) ->
+        return cb err if err
+        cb null, !!result
     save: (cb) ->
       attrs = @attributes()
-      if @[@_primary_key]
+      begin = ->
+        if not @[@_primary_key] then insert()
+        else @exists @[@_primary_key], (err, exists) ->
+          if exists then update()
+          else insert()
+          return
+        return
+      update = =>
         pairs = []
         for k, v of attrs when not (k is @_primary_key)
           pairs.push "#{@escape_key k} = #{@escape v}"
-        sql = "UPDATE #{@escape_key @_table}\n"+
+        execute_sql "UPDATE #{@escape_key @_table}\n"+
           "SET #{pairs.join(', ')}\n"+
           "WHERE #{@escape_key @_primary_key} = #{@escape @[@_primary_key]};"
-      else
+        return
+      insert = =>
         names = []
         values = []
         for k, v of attrs when not (k is @_primary_key)
           names.push @escape_key k
           values.push @escape v
-        sql = "INSERT INTO #{@escape_key @_table} "+
+        execute_sql "INSERT INTO #{@escape_key @_table} "+
           "(#{names.join(', ')}) VALUES\n"+
           "(#{values.join(', ')});"
-      @execute_sql sql, cb
+        return
+      execute_sql = (sql) =>
+        @execute_sql sql, cb
+      begin()
+      return
     @build: (o) ->
       return instance = new @ o
     @create: (o, cb) ->
@@ -173,12 +208,14 @@ module.exports = class CoffeeShop
       cb null
 
     # pending
+    delete: ->
+    deleteAll: ->
     has_one: (s) -> @_has_one.push s
     has_many: (s) -> @_has_many.push s
     has_and_belongs_to_many: (s) -> @_has_and_belongs_to_many.push s
     belongs_to: (s) -> @_belongs_to.push s
     validates_presence_of: ->
-    mount_uploader: ->
+    #mount_uploader: -> # should be third-party provided
     validates_uniqueness_of: ->
     validates_format_of: ->
     transform_serialize: ->

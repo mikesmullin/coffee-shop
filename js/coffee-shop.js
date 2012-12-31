@@ -131,7 +131,11 @@ module.exports = CoffeeShop = (function() {
     };
 
     _Class.prototype.escape = function(s) {
-      return "'" + s.toString().replace(/'/g, "\'") + "'";
+      if (typeof s === 'undefined' || s === null) {
+        return 'NULL';
+      } else {
+        return "'" + s.toString().replace(/'/g, "\'") + "'";
+      }
     };
 
     _Class.prototype.toString = function() {
@@ -155,9 +159,7 @@ module.exports = CoffeeShop = (function() {
       _Class.__super__.constructor.call(this);
       this.id = null;
       this.table(this.constructor.name.pluralize().toLowerCase());
-      this._attributes = {
-        id: true
-      };
+      this._attributes = {};
       this._has_one = [];
       this._has_many = [];
       this._has_and_belongs_to_many = [];
@@ -181,6 +183,7 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.attributes = function() {
       var attrs, k;
       attrs = {};
+      attrs[this._primary_key] = this[this._primary_key];
       for (k in this) {
         if (!__hasProp.call(this, k)) continue;
         if (y(this._attributes[k]) !== 'u') {
@@ -195,54 +198,95 @@ module.exports = CoffeeShop = (function() {
     };
 
     _Class.prototype.all = function(cb) {
-      return this.execute_sql(this.toSql(), cb);
-    };
-
-    _Class.prototype.first = function(cb) {
-      return this.all(function(err, results) {
-        return cb(results[0]);
+      var _this = this;
+      this.execute_sql(this.toSql(), function(err, records) {
+        var k;
+        if (err) {
+          return cb(err);
+        }
+        for (k in records) {
+          records[k] = new _this.constructor(records[k]);
+        }
+        cb(null, records);
       });
     };
 
-    _Class.prototype.last = function(cb) {
+    _Class.prototype.first = function(cb) {
+      this.limit(1);
       return this.all(function(err, results) {
-        return cb(results[results.length - 1]);
+        if (err) {
+          return cb(err);
+        }
+        return cb(null, results[0]);
       });
     };
 
     _Class.prototype.find = function(id, cb) {
+      this.select('*');
       this.where({
         id: id
       });
       return this.first(cb);
     };
 
+    _Class.prototype.exists = function(id, cb) {
+      var conditions;
+      conditions = {};
+      conditions[this._primary_key] = id;
+      return this.select('1').where(conditions).limit(1).first(function(err, result) {
+        if (err) {
+          return cb(err);
+        }
+        return cb(null, !!result);
+      });
+    };
+
     _Class.prototype.save = function(cb) {
-      var attrs, k, names, pairs, sql, v, values;
+      var attrs, begin, execute_sql, insert, update,
+        _this = this;
       attrs = this.attributes();
-      if (this[this._primary_key]) {
+      begin = function() {
+        if (!this[this._primary_key]) {
+          insert();
+        } else {
+          this.exists(this[this._primary_key], function(err, exists) {
+            if (exists) {
+              update();
+            } else {
+              insert();
+            }
+          });
+        }
+      };
+      update = function() {
+        var k, pairs, v;
         pairs = [];
         for (k in attrs) {
           v = attrs[k];
-          if (!(k === this._primary_key)) {
-            pairs.push("" + (this.escape_key(k)) + " = " + (this.escape(v)));
+          if (!(k === _this._primary_key)) {
+            pairs.push("" + (_this.escape_key(k)) + " = " + (_this.escape(v)));
           }
         }
-        sql = ("UPDATE " + (this.escape_key(this._table)) + "\n") + ("SET " + (pairs.join(', ')) + "\n") + ("WHERE " + (this.escape_key(this._primary_key)) + " = " + (this.escape(this[this._primary_key])) + ";");
-      } else {
+        execute_sql(("UPDATE " + (_this.escape_key(_this._table)) + "\n") + ("SET " + (pairs.join(', ')) + "\n") + ("WHERE " + (_this.escape_key(_this._primary_key)) + " = " + (_this.escape(_this[_this._primary_key])) + ";"));
+      };
+      insert = function() {
+        var k, names, v, values;
         names = [];
         values = [];
         for (k in attrs) {
           v = attrs[k];
-          if (!(!(k === this._primary_key))) {
+          if (!(!(k === _this._primary_key))) {
             continue;
           }
-          names.push(this.escape_key(k));
-          values.push(this.escape(v));
+          names.push(_this.escape_key(k));
+          values.push(_this.escape(v));
         }
-        sql = ("INSERT INTO " + (this.escape_key(this._table)) + " ") + ("(" + (names.join(', ')) + ") VALUES\n") + ("(" + (values.join(', ')) + ");");
-      }
-      return this.execute_sql(sql, cb);
+        execute_sql(("INSERT INTO " + (_this.escape_key(_this._table)) + " ") + ("(" + (names.join(', ')) + ") VALUES\n") + ("(" + (values.join(', ')) + ");"));
+      };
+      execute_sql = function(sql) {
+        return _this.execute_sql(sql, cb);
+      };
+      begin();
     };
 
     _Class.build = function(o) {
@@ -260,8 +304,12 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.execute_sql = function(sql, cb) {
       console.log("would have executed sql:", sql);
       console.log("override .execute_sql() function to make it happen for real.");
-      return cb(null);
+      return cb(null, true);
     };
+
+    _Class.prototype["delete"] = function() {};
+
+    _Class.prototype.deleteAll = function() {};
 
     _Class.prototype.has_one = function(s) {
       return this._has_one.push(s);
@@ -280,8 +328,6 @@ module.exports = CoffeeShop = (function() {
     };
 
     _Class.prototype.validates_presence_of = function() {};
-
-    _Class.prototype.mount_uploader = function() {};
 
     _Class.prototype.validates_uniqueness_of = function() {};
 
