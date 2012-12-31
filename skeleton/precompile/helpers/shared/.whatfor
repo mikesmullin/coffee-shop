@@ -1,1 +1,2 @@
 client-side (or server-side)  .js.coffee CoffeeTemplates helper functions.
+executed at the handlebars level
