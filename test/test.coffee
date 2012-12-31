@@ -14,6 +14,7 @@ describe 'CoffeeShop', ->
       class User extends CoffeeShop.Model
         constructor: ->
           (super)
+          @attr_accessible 'first_name last_name'.split ' '
           # pending
           #@has_one 'credit_card'
           #@has_one 'pet'
@@ -91,13 +92,13 @@ describe 'CoffeeShop', ->
       user.first_name = 'bob'
       user.last_name = 'anderson'
       o = user.attributes()
-      assert.deepEqual {"id":1,"first_name":"bob","last_name":"anderson"}, o
+      assert.deepEqual o, {"id":1,"first_name":"bob","last_name":"anderson"}
       _expecting = false
 
     it 'can build new models, without validating or saving', ->
       user = User.build first_name: 'bob', last_name: 'anderson'
       o = user.attributes()
-      assert.deepEqual {"id":null,"first_name":"bob","last_name":"anderson"}, o
+      assert.deepEqual o, {"id":null,"first_name":"bob","last_name":"anderson"}
       _expecting = false
 
     it 'can build insert statement from model attributes', (done) ->

@@ -151,14 +151,13 @@ module.exports = CoffeeShop = (function() {
     __extends(_Class, _super);
 
     function _Class() {
-      var a, k, _ref;
+      var a, k;
       _Class.__super__.constructor.call(this);
       this.id = null;
       this.table(this.constructor.name.pluralize().toLowerCase());
-      this._non_attributes = {};
-      for (k in _ref = '_non_attributes _table table _primary_key primary_key _simple _select select project _join join joins include _where where _group group _having having _order order _limit limit take _offset offset skip escape_key escape toString toSql _has_one has_one _has_many has_many _has_and_belongs_to_many has_and_belongs_to_many _belongs_to belongs_to attr_accessible serialize validates_presence_of execute_sql all first last find attributes save mount_uploader validates_uniqueness_of validates_format_of transform_serialize update_attributes update_column after_create build create'.split(' ')) {
-        this._non_attributes[_ref[k]] = true;
-      }
+      this._attributes = {
+        id: true
+      };
       this._has_one = [];
       this._has_many = [];
       this._has_and_belongs_to_many = [];
@@ -169,6 +168,31 @@ module.exports = CoffeeShop = (function() {
       }
       return;
     }
+
+    _Class.prototype.attr_accessible = function(a) {
+      var k, _results;
+      _results = [];
+      for (k in a) {
+        _results.push(this._attributes[a[k]] = true);
+      }
+      return _results;
+    };
+
+    _Class.prototype.attributes = function() {
+      var attrs, k;
+      attrs = {};
+      for (k in this) {
+        if (!__hasProp.call(this, k)) continue;
+        if (y(this._attributes[k]) !== 'u') {
+          attrs[k] = this[k];
+        }
+      }
+      return attrs;
+    };
+
+    _Class.prototype.serialize = function() {
+      return JSON.stringify(this.attributes());
+    };
 
     _Class.prototype.all = function(cb) {
       return this.execute_sql(this.toSql(), cb);
@@ -191,21 +215,6 @@ module.exports = CoffeeShop = (function() {
         id: id
       });
       return this.first(cb);
-    };
-
-    _Class.prototype.attributes = function() {
-      var attrs, k;
-      attrs = {};
-      for (k in this) {
-        if (typeof this._non_attributes[k] === 'undefined') {
-          attrs[k] = this[k];
-        }
-      }
-      return attrs;
-    };
-
-    _Class.prototype.serialize = function() {
-      return JSON.stringify(this.attributes());
     };
 
     _Class.prototype.save = function(cb) {
@@ -244,7 +253,7 @@ module.exports = CoffeeShop = (function() {
     _Class.create = function(o, cb) {
       var instance;
       instance = new this(o);
-      instance.save(cb);
+      instance.save(cb || function() {});
       return instance;
     };
 
@@ -269,8 +278,6 @@ module.exports = CoffeeShop = (function() {
     _Class.prototype.belongs_to = function(s) {
       return this._belongs_to.push(s);
     };
-
-    _Class.prototype.attr_accessible = function() {};
 
     _Class.prototype.validates_presence_of = function() {};
 
