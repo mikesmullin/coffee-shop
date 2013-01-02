@@ -18,20 +18,34 @@ Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/
 
 See also: http://gilesbowkett.blogspot.com/2012/02/rails-went-off-rails-why-im-rebuilding.html
 
-## Installation on Debian/Ubuntu
+## Installation
 
 ```bash
-# install node.js and npm
-sudo apt-get install nodejs
+# install NVM (recommended)
+sudo apt-get remove nodejs npm # if it was installed before this
+curl https://raw.github.com/creationix/nvm/master/install.sh | sh
 
-# install CoffeeSprites/node-gd dependency
-sudo apt-get install libgd2-xpm-dev # libgd
+# install node
+nvm install 0.8.15 # the version we're testing with
+nvm alias default 0.8.15
 
-# install coffee-shop
-sudo npm install coffee-shop -g
+# install CoffeeSprites/node-gd dependencies
+sudo apt-get install libgd2-xpm-dev build-essential # libgd, build tools
+# install CoffeeShop dependencies
+npm install coffee-script -g # gives `cake` binary
+# install CoffeeShop
+npm install coffee-shop -g
 
-# bake new project
+# generate new project
 shop new <project>
+
+# start server
+cd <project>
+chmod +x loop # temporarily necessary
+./loop cake start
+
+# browse to
+http://localhost:3001/
 ```
 
 ## Related
