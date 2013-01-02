@@ -1,6 +1,6 @@
 {
   "name": "coffee-shop",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Coffee Web Framework.",
   "main": "js/coffee-shop.js",
   "bin": {
@@ -22,10 +22,10 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "coffee-script": "~1.4.0",
-    "sugar": "~1.3.7"
+    "coffee-script": "*",
+    "sugar": "*"
   },
   "devDependencies": {
-    "chai": "~1.4.2"
+    "chai": "*"
   }
 }
