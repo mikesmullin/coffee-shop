@@ -67,7 +67,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       'async2': 'https://github.com/mikesmullin/async2/tarball/stable'
       'node-sqlite-purejs': 'https://github.com/mikesmullin/node-sqlite-purejs/tarball/stable'
     devDependencies:
-      'coffee-script': 'https://github.com/mikesmullin/coffee-script/tarball/stable'
+      'coffee-script': '*'
       'mocha': '*'
       'gaze': '*'
       'growl': '*'
