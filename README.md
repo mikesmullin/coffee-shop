@@ -31,8 +31,10 @@ nvm alias default 0.8.15
 
 # install CoffeeSprites/node-gd dependencies
 sudo apt-get install libgd2-xpm-dev build-essential # libgd, build tools
+sudo apt-get install pngcrush # optional optimizer makes PNG files smaller
 # install CoffeeShop dependencies
 npm install coffee-script -g # gives `cake` binary
+npm install node-inspector -g # gives `node-inspector` binary
 # install CoffeeShop
 npm install coffee-shop -g
 

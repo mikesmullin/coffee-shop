@@ -69,9 +69,6 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     devDependencies:
       'coffee-script': '*'
       'mocha': '*'
-      'gaze': '*'
-      'growl': '*'
-      'mkdirp': '*'
       'coffee-assets': 'https://github.com/mikesmullin/coffee-assets/tarball/stable'
       'coffee-templates': 'https://github.com/mikesmullin/coffee-templates/tarball/stable'
       'coffee-stylesheets': 'https://github.com/mikesmullin/coffee-stylesheets/tarball/stable'
