@@ -87,8 +87,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
   write 'package.json', JSON.stringify pack, null, 2
   write 'README.md', "# #{name}"
 
-  process.chdir target
-  child = child_process.spawn 'npm', ['install'], stdio: 'inherit'
+  child = child_process.spawn 'npm', ['install', '--force'], env: process.env, cwd: target, stdio: 'inherit'
   child.on 'exit', (code) -> if code is 0
     console.log "\nCoffeeShop skeleton copy completed successfully!\nnow try:\n\n  cd #{name}\n  shop open\n"
 
