@@ -122,6 +122,18 @@ task 'db', 'opens application database in sqlite3 cli', ->
   console.log "REMEMBER: CTRL+D to exit"
   child_process.spawn 'sqlite3', [path.join('static', 'db', 'development.sqlite')], stdio: 'inherit'
 
+task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
+  console.log "\ngit pull"
+  child = child_process.spawn 'git', ['pull'], stdio: 'inherit'
+  child.on 'exit', (code) -> if code is 0
+    console.log "\nnpm install coffee-shop -g"
+    child = child_process.spawn 'npm', ['install', 'coffee-shop', '-g'], stdio: 'inherit'
+    child.on 'exit', (code) -> if code is 0
+      console.log "\nnpm install"
+      child = child_process.spawn 'npm', ['install'], stdio: 'inherit'
+      child.on 'exit', (code) -> if code is 0
+        console.log "update completed successfully."
+
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
 if not _tasks[cmd]?
