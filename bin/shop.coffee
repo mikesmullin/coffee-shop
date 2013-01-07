@@ -1,6 +1,7 @@
 'use strict'
 
 child_process = require 'child_process'
+path = require 'path'
 
 cli =
   bold: '\u001b[1m'
@@ -111,6 +112,15 @@ task 'open', 'starts the main event loop', ->
   process.on 'SIGINT', ->
   process.on 'SIGQUIT', ->
     child.removeAllListeners 'exit'
+
+task 'console', 'opens application environment in a CoffeeScript REPL', ->
+  process.env.BOOTSTRAP = true
+  global.app = require(path.join(process.cwd(), 'server.js'))(-> process.stdout.write "coffee> CoffeeShop ready.\ncoffee> ")
+  require 'coffee-script/lib/coffee-script/repl'
+
+task 'db', 'opens application database in sqlite3 cli', ->
+  console.log "REMEMBER: CTRL+D to exit"
+  child_process.spawn 'sqlite3', [path.join('static', 'db', 'development.sqlite')], stdio: 'inherit'
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
