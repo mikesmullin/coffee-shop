@@ -135,7 +135,7 @@ task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
         console.log "update completed successfully."
 
 task 'version', 'output the current package version', ->
-  console.log 'v'+require(path.join(process.cwd(),'package.json')).version
+  console.log 'v'+require(path.join(__dirname,'..','package.json')).version
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
