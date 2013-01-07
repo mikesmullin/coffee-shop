@@ -1,0 +1,4 @@
+POEdit .po file translations converted to .json and
+rendered with a server or client compatible
+internationalization (I8N) or localization (L10N) library
+such as Jed.js

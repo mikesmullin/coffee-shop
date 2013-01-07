@@ -1,2 +1,1 @@
-server-side only .js.coffee CoffeeTemplates helper functions.
-executed at the coffeecup level
+helper functions executable by the server

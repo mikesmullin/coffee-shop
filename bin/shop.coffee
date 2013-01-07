@@ -1,7 +1,9 @@
 'use strict'
 
 child_process = require 'child_process'
+fs = require 'fs'
 path = require 'path'
+process.env.NODE_ENV = process.env.NODE_ENV or 'development'
 
 cli =
   bold: '\u001b[1m'
@@ -25,8 +27,6 @@ task 'help', 'see this help information', ->
 task 'new', 'copy new empty application skeleton to given directory', (name) ->
   skeleton = __dirname+'/../skeleton'
   target = process.cwd()+'/'+name
-  fs = require 'fs'
-  path = require 'path'
 
   walk = (base, cb) ->
     items = fs.readdirSync base
@@ -46,7 +46,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{dir}"
 
   write = (file, contents) ->
-    fs.writeFileSync target+'/'+file, contents
+    fs.writeFileSync target+'/'+file, contents, 'binary'
     console.log "      #{cli.bold}#{cli.green}create#{cli.reset}  #{name}/#{file}"
 
   mkdir '' # target dir
@@ -56,7 +56,7 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     else if file
       infile = file
       file = file.substr skeleton.length+1
-      write file, fs.readFileSync infile, 'utf8'
+      write file, fs.readFileSync infile, 'binary'
 
   pack =
     name: name
@@ -65,8 +65,9 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     main: 'server.js'
     dependencies:
       'express': '*'
-      'coffee-shop': 'https://github.com/mikesmullin/coffee-shop/tarball/stable'
+      'connect-flash': '*'
       'sugar': '*'
+      'coffee-shop': 'https://github.com/mikesmullin/coffee-shop/tarball/stable'
       'async2': 'https://github.com/mikesmullin/async2/tarball/stable'
       'node-sqlite-purejs': 'https://github.com/mikesmullin/node-sqlite-purejs/tarball/stable'
     devDependencies:
@@ -86,15 +87,10 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
   write 'package.json', JSON.stringify pack, null, 2
   write 'README.md', "# #{name}"
 
-  shell = (cmd, cb) ->
-    child_process.exec cmd, (err, stdout, stderr) ->
-      if err then console.log err
-      if stderr then console.log stderr
-      if stdout then console.log stdout
-      cb() if not err and typeof cb is 'function'
-
-  shell "cd #{target} && npm install", ->
-    console.log "done! next steps:\n\ncd #{name}\nshop open"
+  process.chdir target
+  child = child_process.spawn 'npm', ['install'], stdio: 'inherit'
+  child.on 'exit', (code) -> if code is 0
+    console.log "\nCoffeeShop skeleton copy completed successfully!\nnow try:\n\n  cd #{name}\n  shop open\n"
 
 task 'open', 'starts the main event loop', ->
   console.log "REMEMBER: CTRL+C to restart, CTRL+\\ to exit"
@@ -113,14 +109,18 @@ task 'open', 'starts the main event loop', ->
   process.on 'SIGQUIT', ->
     child.removeAllListeners 'exit'
 
-task 'console', 'opens application environment in a CoffeeScript REPL', ->
+bootstrap = (cb) ->
   process.env.BOOTSTRAP = true
-  global.app = require(path.join(process.cwd(), 'server.js'))(-> process.stdout.write "coffee> CoffeeShop ready.\ncoffee> ")
+  global.app = require(path.join(process.cwd(), 'server.js'))(cb)
+db_file = path.join 'static', 'db', process.env.NODE_ENV+'.sqlite'
+
+task 'console', 'opens application environment in a CoffeeScript REPL', ->
+  bootstrap -> process.stdout.write "coffee> CoffeeShop ready.\ncoffee> "
   require 'coffee-script/lib/coffee-script/repl'
 
 task 'db', 'opens application database in sqlite3 cli', ->
   console.log "REMEMBER: CTRL+D to exit"
-  child_process.spawn 'sqlite3', [path.join('static', 'db', 'development.sqlite')], stdio: 'inherit'
+  child_process.spawn 'sqlite3', [db_file], stdio: 'inherit'
 
 task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
   console.log "\ngit pull"
@@ -136,6 +136,25 @@ task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
 
 task 'version', 'output the current package version', ->
   console.log 'v'+require(path.join(__dirname,'..','package.json')).version
+
+task 'db:drop', 'drop database of current NODE_ENV', ->
+  if fs.existsSync db_file
+    fs.unlinkSync db_file
+    console.log "deleted database #{db_file}."
+  else
+    console.log "database #{db_file} doesn't exist!"
+    process.exit 1
+
+#task 'db:create', 'create database of current NODE_ENV', ->
+#  if fs.existsSync db_file
+#    console.log "database #{db_file} already exists!"
+#    process.exit 1
+#  else
+#    fs.writeFile db_file, ''
+#    console.log "wrote empty database #{db_file}."
+
+task 'db:seed', 'reimport the database', ->
+  child = child_process.spawn 'node', [path.join 'static', 'db', 'seeds.js'], stdio: 'inherit'
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)

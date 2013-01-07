@@ -1,1 +1,1 @@
-publicly-accessible static files (e.g. for a static file server)
+third-party files that need no precompilation or are already compiled (static)

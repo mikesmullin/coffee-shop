@@ -1,2 +1,5 @@
 node_modules/
 npm-debug.log
+static/db/*.sqlite*
+static/public/assets/templates.js
+static/app/views/templates.js

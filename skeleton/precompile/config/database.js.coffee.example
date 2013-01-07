@@ -1,25 +1,24 @@
-_=(a,b)->c={};c[k]=a[k]for k of a;c[k]=b[k]for k of b;c
-module.exports =
-  mysql: mysql =
-    adapter: 'mysql'
-    host: '127.0.0.1'
+mysql: mysql =
+  adapter: 'mysql2'
+  host: '127.0.0.1'
+  username: 'root'
 
-  production:
-    _ mysql,
-      database: 'project'
-      username: 'root'
+production:
+  _ mysql,
+    database: 'project'
+    username: 'root'
 
-  staging:
-    _ mysql,
-      database: 'project_stage'
-      username: 'root'
+staging:
+  _ mysql,
+    database: 'project_staging'
+    username: 'root'
 
-  development:
-    _ mysql,
-      database: 'project_dev'
-      username: 'root'
+development:
+  _ mysql,
+    database: 'project_development'
+    username: 'root'
 
-  test:
-    _ mysql,
-      database: 'project_test'
-      username: 'root'
+test:
+  _ mysql,
+    database: 'project_test'
+    username: 'root'

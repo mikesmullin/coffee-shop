@@ -1,0 +1,10 @@
+/* line 3, precompile/assets/stylesheets/application.css.coffee */
+body {
+  background: #ccc;
+  color: #333;
+  margin: 2em;
+  text-align: center;
+  font-family: monospace; }
+/* line 9, precompile/assets/stylesheets/application.css.coffee */
+body img {
+  border: 4px solid black; }

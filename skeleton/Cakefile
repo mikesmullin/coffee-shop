@@ -1,157 +1,97 @@
-growl         = require 'growl'
-gaze          = require 'gaze'
-child_process = require 'child_process'
-fs            = require 'fs'
-path          = require 'path'
-mkdirp        = require 'mkdirp'
-assets        = require 'coffee-assets'
+async           = require 'async2'
+fs              = require 'fs'
+CoffeeAssets    = require 'coffee-assets'
+path            = CoffeeAssets.path # provides .xplat
+require_fresh   = CoffeeAssets.require_fresh # bypasses cache
+asset           = new CoffeeAssets asset_path: asset_path = 'static/public/assets'
+child_processes = {}
 
-_t = {}; i = 0; colors = [ '\u001b[33m', '\u001b[34m', '\u001b[35m', '\u001b[36m', '\u001b[31m', '\u001b[32m', '\u001b[1m\u001b[33m', '\u001b[1m\u001b[34m', '\u001b[1m\u001b[35m', '\u001b[1m\u001b[36m', '\u001b[1m\u001b[31m', '\u001b[1m\u001b[32m' ]
-notify = (title, msg, image, err, show) ->
-  _t[title] = i++ if typeof _t[title] is 'undefined'
-  msg = msg.stack if err and typeof msg is 'object' and typeof msg.stack isnt 'undefined'
-  console.log "#{colors[_t[title]]}#{title}:\u001b[0m #{msg.toString().replace(/[\r\n]+$/, '')}"
-  growl msg, image: process.cwd()+'/node_modules/coffee-assets/images/'+image+'.png', title: title if show
+task 'open', 'start main process loop', ->
+  asset.watch 'gaze', 'Cakefile', (o) ->
+    asset.notify o.title, 'Cakefile changed. restart...', 'pending', false, true
+    asset.safe_shutdown_child_processes child_processes, 'node', ->
+      process.exit 0
 
-watch = ->
-  a = arguments
-  cb = a[a.length-1]
-  if a.length is 2
-    globs = [ in: [''], out: '' ]
-    suffix = a[0]
-  else if a.length is  3
-    globs = a[0]
-    suffix = a[1]
-  for k, glob of globs
-    glob.in = [ glob.in ] if typeof glob.in is 'string'
-    for kk of glob.in
-      ((glob)->
-        notify 'gaze', "watching #{glob.in+glob.suffix}", 'working', false, false
-        gaze glob.in+glob.suffix, (err, watcher) ->
-          notify 'gaze', err, 'failure', true, false if err
-          @on 'changed', (file) ->
-            relout = path.join(glob.out, path.relative(path.join(process.cwd(), glob.in), file))
-            cb file, relout, glob.in, glob.out
-      )(in: glob.in[kk], out: glob.out, suffix: glob.suffix or suffix)
-
-write = (who, file, data, cb) ->
-  mkdirp.sync path.dirname file
-  fs.writeFile file, data, 'utf8', (err) ->
-    if err
-      notify who, "unable to write #{file}. #{err}", 'failure', true, true
-    else
-      notify who, "wrote #{file}", 'success', false, true
-      cb() if typeof cb is 'function'
-
-node_child = null
-restart_node = -> node_child.kill() if node_child?
-start_node = ->
-  last_start = new Date()
-  node_child = child_process.spawn 'node', ['server.js']
-  node_child.stdout.on 'data', (stdout) ->
-    notify 'node', ''+stdout, 'working', false, false
-  node_child.stderr.on 'data', (stderr) ->
-    notify 'node', ''+stderr, 'failure', true, true
-  node_child.on 'exit', (code) ->
-    uptime = (new Date()-last_start)
-    notify 'node', "node server died (uptime: #{uptime/1000}sec)", 'working', false, false
-    if uptime < 2*1000
-      notify 'node', 'due to short uptime, 15sec to restart...', 'working', false, false
-      setTimeout start_node, 15*1000 # wait 5 sec before trying again
-    else
-      start_node()
-  notify 'node', 'spawned new server instance', 'working', false, false
-
-
-# tasks
-task 'start', 'start main process loop', ->
-  watch 'Cakefile', ->
-    notify 'cake', 'Cakefile changed.', 'working', false, true
-    restart_node()
-    process.exit 0
-
-  # CoffeeScripts
-  watch [
+  asset.watch 'coffeescripts', [
       in: 'precompile'
       suffix: '/server.js.coffee'
       out: ''
+    ,
+      in: 'precompile/db'
+      suffix: '/seeds.js.coffee'
+      out: 'static/db'
+    ,
+      in: 'precompile/config'
+      out: 'static/config'
     ,
       in: 'precompile/controllers/server'
       out: 'static/app/controllers'
     ,
       in: 'precompile/controllers/shared'
-      out:  'static/public/assets/controllers'
+      out: "#{asset_path}/controllers"
     ,
       in: 'precompile/models/server'
       out: 'static/app/models'
     ,
       in: 'precompile/models/shared'
-      out: 'static/public/assets/models'
+      out: "#{asset_path}/models"
     ,
       in: 'precompile/helpers/server'
       out: 'static/app/helpers'
     ,
       in: 'precompile/helpers/shared'
-      out: 'static/public/assets/helpers'
+      out: "#{asset_path}/helpers"
     ,
-      in: [
-        'precompile/assets/behaviors'
-        'precompile/vendor/assets'
-      ]
-      out: 'static/public/assets'
+      in: 'precompile/assets/behaviors'
+      out: asset_path
   # filenames with underscore prefix are only compiled via #= require directive
-  ], '/**/!(@(_))*.{js,js.coffee}', (infile, outfile) ->
-    assets.precompile infile, assets.compiler(), (err, compiled) ->
-      return notify 'coffeescript', err, 'failure', true, true if err
-      write 'coffeescript', outfile.replace(/\.coffee$/,''), compiled
+  ], '/**/!(@(_))*.{js,js.coffee}', asset.common_compiler()
 
-  # CoffeeStylesheets
-  watch [
-    in: [
-      'precompile/assets/stylesheets'
-      'precompile/vendor/assets'
-    ],
-    out: 'static/public/assets'
+  asset.watch 'coffeestylesheets', [
+    in: 'precompile/assets/stylesheets'
+    out: asset_path
   # filenames with underscore prefix are only compiled via #= require directive
-  ], '/**/!(@(_))*.{css,css.coffee}', (infile, outfile) ->
-    assets.precompile infile, assets.compiler(
-      render_options:
-        format: true
-      sprite_options:
-        image_path: 'precompile/assets/sprites/'
-        sprite_path: 'static/public/assets/'
-        sprite_url: '/assets/'
-    ), (err, compiled) ->
-      return notify 'coffeestylesheets', err, 'failure', true, true if err
-      write 'coffeestylesheets', outfile.replace(/\.coffee/,''), compiled
+  ], '/**/!(@(_))*.{css,css.coffee}', (o) -> asset.common_compiler(
+    render_options:
+      format: true
+      globals: require_fresh path.xplat __dirname, 'static/app/helpers/stylesheets'
+    sprite_options:
+      image_path: path.xplat 'precompile/assets/sprites'
+      sprite_path: path.xplat asset_path
+      sprite_url: '/assets/' # TODO: include cdn_url or use relative here?
+      #pngcrush: 'pngcrush' # should probably only be run for production
+      logger: (i,m) -> asset.notify o.title, m, i or 'success', i is 'failure', true
+  )(o)
 
-  # CoffeeTemplates
-  watch [
+  asset.watch 'coffeetemplates', [
       in: 'precompile/views/server'
       out: 'static/app/views'
     ,
       in: 'precompile/views/shared'
-      out: 'static/public/assets'
-  ], '/**/*.html.coffee', (infile, outfile, inpath, outpath) ->
+      out: asset_path
+  ], '/**/*.html.coffee', (o) ->
     # if ANY template file changes, ALL must be recompiled
     # because they are aggregated into a single templates.js file and function()
-    assets.precompile_all inpath, {
+    o.outfile = path.join o.outpath, 'templates.js'
+    asset.precompile_all o.inpath, {
       render_options:
         format: true
-        globals:
-          content_for: (s,f) ->
-            @block 'content_for '+JSON.stringify(s), f
-          yields: (s) ->
-            @block 'yields '+JSON.stringify(s), ->
-      compile_options:
-        common_helpers: true
-    }, (err, compiled) ->
-      return notify 'coffeetemplates', err, 'failure', true, true if err
-      write 'coffeetemplates', outpath+'/templates.js', compiled
+        globals: require_fresh path.xplat __dirname, 'static/app/helpers/templates'
+    }, asset.write_manager o
 
-  # JavaScripts
-  watch 'static/app/**/*.js', ->
-    notify 'gaze', 'static .js changed. restarting node', 'working', false, false
-    restart_node()
+  asset.watch 'javascript', 'static/app/**/*.js', (o) ->
+    asset.notify 'gaze', "#{o.infile} changed. restarting node on next tick...", 'pending', false, true
+    process.nextTick ->
+      asset.restart_child_process child_processes.node
 
-  start_node()
+  asset.watch 'coffeejson', [
+    in: 'precompile/config'
+    out: 'static/config'
+  ,
+    in: 'precompile/assets'
+    out: asset_path
+  ], '/**/*.json.coffee', asset.common_compiler()
+
+  child_processes.node_inspector = asset.child_process_loop 'node-inspector', 'node-inspector'
+  child_processes.node = asset.child_process_loop 'node', 'node', ['server.js']
+  asset.forward_interrupt() # use CTRL+\ to kill
