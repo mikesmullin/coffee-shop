@@ -134,6 +134,9 @@ task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
       child.on 'exit', (code) -> if code is 0
         console.log "update completed successfully."
 
+task 'version', 'output the current package version', ->
+  console.log 'v'+require(path.join(process.cwd(),'package.json')).version
+
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)
 if not _tasks[cmd]?
