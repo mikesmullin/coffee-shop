@@ -1,8 +1,12 @@
-# What is CoffeeShop?
+# CoffeeShop
+
+![CoffeeShop artwork](https://raw.github.com/mikesmullin/coffee-shop/stable/skeleton/static/public/images/coffee-shop.png)
+
+## What is CoffeeShop?
 
 Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/sdVvesNOn6g) on YouTube.
 
-# Why CoffeeShop?
+## Why CoffeeShop?
 
     (4:30:59 PM) Antono: what makes coffee-shop innovative? :)
     (4:31:13 PM) Antono: comparing to X (X is what you consider good alternative)

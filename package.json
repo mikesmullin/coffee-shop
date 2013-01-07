@@ -1,10 +1,10 @@
 {
   "name": "coffee-shop",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Coffee Web Framework.",
   "main": "js/coffee-shop.js",
   "bin": {
-    "shop": "./bin/shop"
+    "shop": "bin/shop"
   },
   "scripts": {
     "pretest": "coffee --bare -o js coffee/coffee-shop.coffee",
