@@ -4,6 +4,8 @@
 
 ![CoffeeShop artwork](https://raw.github.com/mikesmullin/coffee-shop/stable/skeleton/static/public/images/coffee-shop.png)
 
+Inspired by [Tower.js](http://towerjs.org/), [Jekyll](https://github.com/mojombo/jekyll), [Picard](https://github.com/dantebronto/picard), and of course [Rails](http://rubyonrails.org/).
+
 ## What is CoffeeShop?
 
 Watch the 15min intro to [Installing Node.js CoffeeShop v0.1.1](http://youtu.be/sdVvesNOn6g) on YouTube.
