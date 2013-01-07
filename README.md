@@ -47,6 +47,9 @@ shop open
 
 # browse to
 http://localhost:3001/
+
+# explore
+shop help # to see more fun things you can do
 ```
 
 ## Related
