@@ -1,5 +1,7 @@
 # CoffeeShop
 
+[Guides](http://mikesmullin.github.com/coffee-shop-docs/) documentation in progress. We welcome your contributions!
+
 ![CoffeeShop artwork](https://raw.github.com/mikesmullin/coffee-shop/stable/skeleton/static/public/images/coffee-shop.png)
 
 ## What is CoffeeShop?
