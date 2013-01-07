@@ -1,5 +1,7 @@
 'use strict'
 
+child_process = require 'child_process'
+
 cli =
   bold: '\u001b[1m'
   green: '\u001b[32m'
@@ -81,8 +83,8 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     author: ''
     license: ''
   write 'package.json', JSON.stringify pack, null, 2
+  write 'README.md', "# #{name}"
 
-  child_process = require 'child_process'
   shell = (cmd, cb) ->
     child_process.exec cmd, (err, stdout, stderr) ->
       if err then console.log err
@@ -91,7 +93,24 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
       cb() if not err and typeof cb is 'function'
 
   shell "cd #{target} && npm install", ->
-    console.log "done! next steps:\n\ncd #{name}\nbash loop cake start"
+    console.log "done! next steps:\n\ncd #{name}\nshop open"
+
+task 'open', 'starts the main event loop', ->
+  console.log "REMEMBER: CTRL+C to restart, CTRL+\\ to exit"
+  child = `undefined`
+  restart = ->
+    child = child_process.spawn 'cake', ['open']
+    child.stdout.on 'data', (stdout) ->
+      process.stdout.write stdout
+    child.stderr.on 'data', (stderr) ->
+      process.stderr.write stderr
+    child.on 'exit', (code) ->
+      process.nextTick restart
+  restart()
+  # ignore these signals; forward to child only
+  process.on 'SIGINT', ->
+  process.on 'SIGQUIT', ->
+    child.removeAllListeners 'exit'
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)

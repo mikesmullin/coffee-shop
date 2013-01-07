@@ -43,8 +43,7 @@ shop new <project>
 
 # start server
 cd <project>
-chmod +x loop # temporarily necessary
-./loop cake start
+shop open
 
 # browse to
 http://localhost:3001/
