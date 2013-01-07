@@ -36,7 +36,7 @@ flow.serial(function(next) {
   app.SERVER_MODELS = path.join(app.APP, 'models', path.sep);
   app.SERVER_HELPERS = path.join(app.APP, 'helpers', path.sep);
   app.SHARED_HELPERS = path.join(app.ASSETS, 'helpers', path.sep);
-  app.set('title', 'Cooper Fit Life');
+  app.set('title', '');
   require_fresh = function(a) {
     delete require.cache[require.resolve(a)];
     return require(a);

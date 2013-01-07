@@ -20,7 +20,7 @@ flow.serial (next) -> # configure
   app.SERVER_MODELS = path.join app.APP, 'models', path.sep
   app.SERVER_HELPERS = path.join app.APP, 'helpers', path.sep
   app.SHARED_HELPERS = path.join app.ASSETS, 'helpers', path.sep
-  app.set 'title', 'Cooper Fit Life'
+  app.set 'title', ''
 
   # CoffeeTemplates.__express
   require_fresh=(a)->delete require.cache[require.resolve a];require a

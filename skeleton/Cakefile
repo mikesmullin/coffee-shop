@@ -5,12 +5,14 @@ path            = CoffeeAssets.path # provides .xplat
 require_fresh   = CoffeeAssets.require_fresh # bypasses cache
 asset           = new CoffeeAssets asset_path: asset_path = 'static/public/assets'
 child_processes = {}
+exit_gracefully = ->
+  asset.safe_shutdown_child_processes child_processes, 'node', ->
+    process.exit 0
 
 task 'open', 'start main process loop', ->
   asset.watch 'gaze', 'Cakefile', (o) ->
     asset.notify o.title, 'Cakefile changed. restart...', 'pending', false, true
-    asset.safe_shutdown_child_processes child_processes, 'node', ->
-      process.exit 0
+    exit_gracefully()
 
   asset.watch 'coffeescripts', [
       in: 'precompile'
@@ -94,4 +96,7 @@ task 'open', 'start main process loop', ->
 
   child_processes.node_inspector = asset.child_process_loop 'node-inspector', 'node-inspector'
   child_processes.node = asset.child_process_loop 'node', 'node', ['server.js']
+  process.on 'uncaughtException', (err) ->
+    console.log err.stack
+    exit_gracefully()
   asset.forward_interrupt() # use CTRL+\ to kill
