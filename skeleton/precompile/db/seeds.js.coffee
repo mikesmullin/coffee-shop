@@ -1,6 +1,5 @@
 module.exports = (app) ->
-  model = app.model 'user'
-  model.execute_sql """
+  app.db.execute_sql """
   DROP TABLE IF EXISTS `sessions`;
 
   CREATE TABLE "sessions" ("id" integer PRIMARY KEY  NOT NULL, "session_id" varchar(255) NOT NULL, "data" text);
