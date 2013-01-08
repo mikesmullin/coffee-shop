@@ -16,7 +16,7 @@ app = express();
 
 server = undefined;
 
-cb = function() {};
+cb = undefined;
 
 module.exports = function(f) {
   return cb = f;
@@ -24,10 +24,22 @@ module.exports = function(f) {
 
 flow = new async;
 
+process.on('uncaughtException', function(err) {
+  if (err.code === 'EADDRINUSE') {
+    return process.stderr.write("FATAL: port is already open. kill all node processes and try again.");
+  } else {
+    process.stderr.write("\nWARNING: handle your exceptions better: \n\n" + err.stack + "\n\n");
+    if (server) {
+      server.close();
+    }
+    return process.exit(1);
+  }
+});
+
 flow.serial(function(next) {
   var require_fresh;
+  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
   app.PORT = process.env.PORT || 3001;
-  app.ENV = process.env.ENV || 'development';
   app.STATIC = path.join(__dirname, 'static', path.sep);
   app.PUBLIC = path.join(app.STATIC, 'public', path.sep);
   app.ASSETS = path.join(app.PUBLIC, 'assets', path.sep);
@@ -104,7 +116,7 @@ flow.serial(function(next) {
 });
 
 flow.serial(function(next) {
-  var SQLiteStore;
+  var SQLStore;
   app.use(express.cookieParser());
   app.use(express.bodyParser());
   app.use(function(req, res, done) {
@@ -122,15 +134,15 @@ flow.serial(function(next) {
       path: '/',
       maxAge: 1000 * 60 * 30
     },
-    store: new (SQLiteStore = (function(_super) {
+    store: new (SQLStore = (function(_super) {
 
-      __extends(SQLiteStore, _super);
+      __extends(SQLStore, _super);
 
-      function SQLiteStore() {
-        return SQLiteStore.__super__.constructor.apply(this, arguments);
+      function SQLStore() {
+        return SQLStore.__super__.constructor.apply(this, arguments);
       }
 
-      SQLiteStore.prototype.get = function(session_id, cb) {
+      SQLStore.prototype.get = function(session_id, cb) {
         return app.model('session').select('data').where({
           session_id: session_id
         }).first(function(err, session) {
@@ -141,7 +153,7 @@ flow.serial(function(next) {
         });
       };
 
-      SQLiteStore.prototype.set = function(session_id, data, cb) {
+      SQLStore.prototype.set = function(session_id, data, cb) {
         var session;
         session = app.model('session');
         return session.select('id').where({
@@ -164,7 +176,7 @@ flow.serial(function(next) {
         });
       };
 
-      return SQLiteStore;
+      return SQLStore;
 
     })(express.session.Store))
   }));
@@ -189,15 +201,13 @@ flow.serial(function(next) {
 
 flow.go(function() {
   require(app.SERVER_CONTROLLERS + 'application')(app);
-  if (!process.env.BOOTSTRAP) {
-    server = app.listen(app.PORT);
-    console.log("listening on http://localhost:" + app.PORT + "/");
-    process.on('SIGINT', function() {
-      console.log("caught SIGINT. will attempt safe shutdown...");
-      return server.close();
+  if (typeof cb === 'function') {
+    process.nextTick(function() {
+      return cb(app);
     });
+    return;
   }
-  return process.nextTick(function() {
-    return cb(app);
+  return server = app.listen(app.PORT, function() {
+    return console.log("worker " + process.pid + " listening on http://localhost:" + app.PORT + "/");
   });
 });

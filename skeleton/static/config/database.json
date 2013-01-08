@@ -1,0 +1,26 @@
+{
+  "mysql": {
+    "host": "localhost",
+    "user": "root"
+  },
+  "production": {
+    "host": "localhost",
+    "user": "root",
+    "database": "project"
+  },
+  "staging": {
+    "host": "localhost",
+    "user": "root",
+    "database": "project"
+  },
+  "development": {
+    "host": "localhost",
+    "user": "root",
+    "database": "project_development"
+  },
+  "test": {
+    "host": "localhost",
+    "user": "root",
+    "database": "project_test"
+  }
+}

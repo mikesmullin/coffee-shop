@@ -103,23 +103,19 @@ task 'open', 'starts the main event loop', ->
     child.on 'exit', (code) ->
       process.nextTick restart
   restart()
-  # ignore these signals; forward to child only
   process.on 'SIGINT', ->
+    console.log "\n\n*** Restarting ***\n"
   process.on 'SIGQUIT', ->
-    child.removeAllListeners 'exit'
+    console.log "\n\n*** Killing ***\n"
+    process.exit 0
 
-bootstrap = (cb) ->
-  process.env.BOOTSTRAP = true
-  global.app = require(path.join(process.cwd(), 'server.js'))(cb)
 db_file = path.join 'static', 'db', process.env.NODE_ENV+'.sqlite'
 
 task 'console', 'opens application environment in a CoffeeScript REPL', ->
-  bootstrap -> process.stdout.write "coffee> CoffeeShop ready.\ncoffee> "
-  require 'coffee-script/lib/coffee-script/repl'
-
-task 'db', 'opens application database in sqlite3 cli', ->
-  console.log "REMEMBER: CTRL+D to exit"
-  child_process.spawn 'sqlite3', [db_file], stdio: 'inherit'
+  require(path.join(process.cwd(), 'server.js')) (app) ->
+    global.app = app
+    process.stdout.write "coffee> CoffeeShop ready.\ncoffee> "
+    require 'coffee-script/lib/coffee-script/repl'
 
 task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
   console.log "\ngit pull"
@@ -133,27 +129,20 @@ task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
       child.on 'exit', (code) -> if code is 0
         console.log "update completed successfully."
 
-task 'version', 'output the current package version', ->
-  console.log 'v'+require(path.join(__dirname,'..','package.json')).version
+task 'db', 'opens application database in cli', ->
+  child_process.spawn 'cake', ['db'], env: process.env, stdio: 'inherit'
 
 task 'db:drop', 'drop database of current NODE_ENV', ->
-  if fs.existsSync db_file
-    fs.unlinkSync db_file
-    console.log "deleted database #{db_file}."
-  else
-    console.log "database #{db_file} doesn't exist!"
-    process.exit 1
+  child_process.spawn 'cake', ['db:drop'], env: process.env, stdio: 'inherit'
 
-#task 'db:create', 'create database of current NODE_ENV', ->
-#  if fs.existsSync db_file
-#    console.log "database #{db_file} already exists!"
-#    process.exit 1
-#  else
-#    fs.writeFile db_file, ''
-#    console.log "wrote empty database #{db_file}."
+task 'db:create', 'create database of current NODE_ENV', ->
+  child_process.spawn 'cake', ['db:create'], env: process.env, stdio: 'inherit'
 
 task 'db:seed', 'reimport the database', ->
-  child = child_process.spawn 'node', [path.join 'static', 'db', 'seeds.js'], stdio: 'inherit'
+  child_process.spawn 'cake', ['db:seed'], env: process.env, stdio: 'inherit'
+
+task 'version', 'output the current package version', ->
+  console.log 'v'+require(path.join(__dirname,'..','package.json')).version
 
 cmd = process.argv[2] or 'help'
 args = process.argv.slice(3)

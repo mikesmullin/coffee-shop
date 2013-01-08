@@ -1,17 +1,26 @@
-path = require 'path'
-fs = require 'fs'
-sugar = require 'sugar'
-express = require 'express'
-async = require 'async2'
-app = express()
-server = `undefined`
-cb = ->
+path           = require 'path'
+fs             = require 'fs'
+sugar          = require 'sugar'
+express        = require 'express'
+async          = require 'async2'
+app            = express()
+server         = `undefined`
+cb             = `undefined`
 module.exports = (f) -> cb = f
-flow = new async
+flow           = new async
+
+process.on 'uncaughtException', (err) ->
+  if err.code is 'EADDRINUSE'
+    process.stderr.write "FATAL: port is already open. kill all node processes and try again."
+  else
+    process.stderr.write "\nWARNING: handle your exceptions better: \n\n"+err.stack+"\n\n"
+    if server then server.close()
+    process.exit 1
+
 
 flow.serial (next) -> # configure
+  process.env.NODE_ENV = process.env.NODE_ENV or 'development'
   app.PORT = process.env.PORT or 3001
-  app.ENV = process.env.ENV or 'development'
   app.STATIC = path.join __dirname, 'static', path.sep
   app.PUBLIC = path.join app.STATIC, 'public', path.sep
   app.ASSETS = path.join app.PUBLIC, 'assets', path.sep
@@ -89,7 +98,7 @@ flow.serial (next) -> # middleware
     key: require(path.join __dirname, 'package.json').name+'.sid'
     secret: "<REPLACE WITH YOUR KEYBOARD CAT HERE>"
     cookie: path: '/', maxAge: 1000*60*30 # 30mins
-    store: new class SQLiteStore extends express.session.Store
+    store: new class SQLStore extends express.session.Store
       get: (session_id, cb) ->
         app.model('session').select('data').where(session_id: session_id).first (err, session) ->
           return cb err if err
@@ -124,12 +133,11 @@ flow.go -> # ready
   # controllers
   require(app.SERVER_CONTROLLERS+'application') app
 
-  unless process.env.BOOTSTRAP
-    # start server
-    server = app.listen app.PORT
-    console.log "listening on http://localhost:#{app.PORT}/"
-    process.on 'SIGINT', ->
-      console.log "caught SIGINT. will attempt safe shutdown..."
-      server.close()
+  if typeof cb is 'function' # for bootstrapping
+    process.nextTick ->
+      cb app # indicate readiness
+    return
 
-  process.nextTick -> cb app # indicate readiness
+  # start server
+  server = app.listen app.PORT, ->
+    console.log "worker #{process.pid} listening on http://localhost:#{app.PORT}/"

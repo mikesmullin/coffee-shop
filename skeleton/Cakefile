@@ -4,19 +4,19 @@ CoffeeAssets    = require 'coffee-assets'
 path            = CoffeeAssets.path # provides .xplat
 require_fresh   = CoffeeAssets.require_fresh # bypasses cache
 asset           = new CoffeeAssets asset_path: asset_path = 'static/public/assets'
+child_process   = require 'child_process'
 child_processes = {}
-exit_gracefully = ->
-  asset.safe_shutdown_child_processes child_processes, 'node', ->
-    process.exit 0
 
 task 'open', 'start main process loop', ->
   asset.watch 'gaze', 'Cakefile', (o) ->
     asset.notify o.title, 'Cakefile changed. restart...', 'pending', false, true
-    exit_gracefully()
+    child_processes.node.on 'exit', ->
+      process.exit 0
+    child_processes.node.kill 'SIGTERM'
 
   asset.watch 'coffeescripts', [
       in: 'precompile'
-      suffix: '/server.js.coffee'
+      suffix: '/*.js.coffee'
       out: ''
     ,
       in: 'precompile/db'
@@ -81,10 +81,13 @@ task 'open', 'start main process loop', ->
         globals: require_fresh path.xplat __dirname, 'static/app/helpers/templates'
     }, asset.write_manager o
 
-  asset.watch 'javascript', 'static/app/**/*.js', (o) ->
-    asset.notify 'gaze', "#{o.infile} changed. restarting node on next tick...", 'pending', false, true
-    process.nextTick ->
-      asset.restart_child_process child_processes.node
+  asset.watch 'javascript', [
+      in: 'static/app/**'
+    ,
+      in: ''
+  ], '/*.js', (o) ->
+    asset.notify 'gaze', "#{o.infile} changed. restarting node...", 'pending', false, true
+    child_processes.node.kill 'SIGTERM'
 
   asset.watch 'coffeejson', [
     in: 'precompile/config'
@@ -94,9 +97,34 @@ task 'open', 'start main process loop', ->
     out: asset_path
   ], '/**/*.json.coffee', asset.common_compiler()
 
-  child_processes.node_inspector = asset.child_process_loop 'node-inspector', 'node-inspector'
-  child_processes.node = asset.child_process_loop 'node', 'node', ['server.js']
+  #asset.child_process_loop child_processes, 'node-inspector', 'node-inspector'
+  asset.child_process_loop child_processes, 'node', 'node', ['server.js']
   process.on 'uncaughtException', (err) ->
-    console.log err.stack
-    exit_gracefully()
-  asset.forward_interrupt() # use CTRL+\ to kill
+    process.stderr.write "\nWARNING: handle your exceptions better: \n\n"+err.stack+"\n\n"
+    process.exit 1
+
+db_config = require(path.xplat process.cwd(), 'static/config/database.json')[process.env.NODE_ENV]
+
+task 'db', 'opens application database in cli', ->
+  console.log "REMEMBER: CTRL+D to exit"
+  child_process.spawn 'sqlite3', [db_file], env: process.env, stdio: 'inherit'
+
+task 'db:drop', 'drop database of current NODE_ENV', ->
+  if fs.existsSync db_file
+    fs.unlinkSync db_file
+    console.log "deleted database #{db_file}."
+  else
+    console.log "database #{db_file} doesn't exist!"
+    process.exit 1
+
+task 'db:create', 'create database of current NODE_ENV', ->
+  if fs.existsSync db_file
+    console.log "database #{db_file} already exists!"
+    process.exit 1
+  else
+    fs.writeFile db_file, ''
+    console.log "wrote empty database #{db_file}."
+
+task 'db:seed', 'reimport the database', ->
+  require(path.xplat process.cwd(), 'server.js') (app) ->
+    require(path.xplat 'static/db/seeds.js')(app)

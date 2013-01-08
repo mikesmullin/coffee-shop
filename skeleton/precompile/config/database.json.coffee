@@ -1,24 +1,19 @@
 mysql: mysql =
-  adapter: 'mysql2'
-  host: '127.0.0.1'
-  username: 'root'
+  host: 'localhost'
+  user: 'root'
 
 production:
   _ mysql,
     database: 'project'
-    username: 'root'
 
 staging:
   _ mysql,
-    database: 'project_staging'
-    username: 'root'
+    database: 'project'
 
 development:
   _ mysql,
     database: 'project_development'
-    username: 'root'
 
 test:
   _ mysql,
     database: 'project_test'
-    username: 'root'

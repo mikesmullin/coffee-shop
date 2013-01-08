@@ -1,5 +1,4 @@
-process.env.BOOTSTRAP = true
-require('../../server.js') (app) ->
+module.exports = (app) ->
   model = app.model 'user'
   model.execute_sql """
   DROP TABLE IF EXISTS `sessions`;
