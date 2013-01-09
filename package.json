@@ -1,5 +1,6 @@
 {
   "name": "coffee-shop",
+  "preferGlobal": "true",
   "version": "0.1.8",
   "description": "Coffee Web Framework.",
   "main": "js/coffee-shop.js",
@@ -27,5 +28,9 @@
   },
   "devDependencies": {
     "chai": "*"
-  }
+  },
+  "bundledDependencies": [
+    "coffee-script",
+    "sugar"
+  ]
 }
