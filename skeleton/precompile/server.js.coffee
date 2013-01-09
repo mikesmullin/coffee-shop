@@ -71,7 +71,7 @@ flow.serial (next) -> # configure
 
 flow.serial (next) -> # database
   sql = require 'node-sqlite-purejs'
-  sql.open db_file = "#{app.STATIC}db/#{app.ENV}.sqlite", {}, (err, db) ->
+  sql.open db_file = "#{app.STATIC}db/#{process.env.NODE_ENV}.sqlite", {}, (err, db) ->
     throw err if err
     app.db = db
     console.log "opened db #{db_file}"
