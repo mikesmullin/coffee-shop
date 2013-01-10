@@ -86,6 +86,13 @@ task 'new', 'copy new empty application skeleton to given directory', (name) ->
     license: ''
   write 'package.json', JSON.stringify pack, null, 2
   write 'README.md', "# #{name}"
+  write '.gitignore', '''
+  node_modules/
+  npm-debug.log
+  static/db/*.sqlite*
+  static/public/assets/templates.js
+  static/app/views/templates.js
+  '''
 
   child = child_process.spawn 'npm', ['install', '--force'], env: process.env, cwd: target, stdio: 'inherit'
   child.on 'exit', (code) -> if code is 0
