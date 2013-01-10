@@ -124,15 +124,20 @@ task 'console', 'opens application environment in a CoffeeScript REPL', ->
     process.stdout.write "coffee> CoffeeShop ready.\ncoffee> "
     require 'coffee-script/lib/coffee-script/repl'
 
-task 'update', 'updates coffee-shop, local git repo, and npm modules', ->
-  console.log "\ngit pull"
-  child = child_process.spawn 'git', ['pull'], stdio: 'inherit'
+task 'update', 'updates coffee-shop and npm modules', ->
+  console.log "\nnpm install --force coffee-shop -g"
+  child = child_process.spawn 'npm', ['install', '--force', 'coffee-shop', '-g'], stdio: 'inherit'
   child.on 'exit', (code) -> if code is 0
-    console.log "\nnpm install coffee-shop -g"
-    child = child_process.spawn 'npm', ['install', 'coffee-shop', '-g'], stdio: 'inherit'
-    child.on 'exit', (code) -> if code is 0
-      console.log "\nnpm install"
-      child = child_process.spawn 'npm', ['install'], stdio: 'inherit'
+    dirs = []
+    base = path.join process.cwd(), 'node_modules'
+    items = fs.readdirSync base
+    for i, item of items
+      if fs.statSync(path.join base, item).isDirectory() and
+        item isnt '.bin'
+          dirs.push item
+    if dirs
+      console.log "\nnpm install #{dirs.join ' '}"
+      child = child_process.spawn 'npm', ['install'].concat(dirs), stdio: 'inherit'
       child.on 'exit', (code) -> if code is 0
         console.log "update completed successfully."
 
