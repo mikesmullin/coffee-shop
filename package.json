@@ -28,9 +28,5 @@
   },
   "devDependencies": {
     "chai": "*"
-  },
-  "bundledDependencies": [
-    "coffee-script",
-    "sugar"
-  ]
+  }
 }
