@@ -93,7 +93,7 @@ flow.serial(function(next) {
 flow.serial(function(next) {
   var db_file, sql;
   sql = require('node-sqlite-purejs');
-  return sql.open(db_file = "" + app.STATIC + "db/" + app.ENV + ".sqlite", {}, function(err, db) {
+  return sql.open(db_file = "" + app.STATIC + "db/" + process.env.NODE_ENV + ".sqlite", {}, function(err, db) {
     if (err) {
       throw err;
     }
