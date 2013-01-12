@@ -24,7 +24,8 @@
   "readmeFilename": "README.md",
   "dependencies": {
     "coffee-script": "*",
-    "sugar": "*"
+    "sugar": "*",
+    "connect": "~2.7.2"
   },
   "devDependencies": {
     "chai": "*"

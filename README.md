@@ -34,8 +34,9 @@ sudo apt-get remove nodejs npm # if it was installed before this
 curl https://raw.github.com/creationix/nvm/master/install.sh | sh
 
 # install node
-nvm install 0.8.15 # the version we're testing with
-nvm alias default 0.8.15
+nvm install 0.8.16 # we test on latest stable
+nvm use 0.8.16
+nvm alias default 0.8.16
 
 # install CoffeeSprites/node-gd dependencies
 sudo apt-get install libgd2-xpm-dev build-essential # libgd, build tools

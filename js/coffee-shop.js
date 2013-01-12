@@ -9,6 +9,70 @@ module.exports = CoffeeShop = (function() {
 
   function CoffeeShop() {}
 
+  CoffeeShop.Server = function() {
+    var app, connect, k, method, methods, path, _fn, _ref,
+      _this = this;
+    connect = require('connect');
+    app = connect();
+    _ref = methods = ['GET', 'POST', 'PUT', 'DELETE'];
+    _fn = function(method) {
+      return app[method.toLowerCase()] = function(uri, cb) {
+        return app.use(function(req, res, next) {
+          var out, params;
+          if (req.method === method) {
+            if ((params = req.url.match(new RegExp("^" + uri + "$"))) !== null) {
+              req.params = params.slice(1);
+              console.log("res.send was: ", res.send);
+              console.log("res.render was: ", res.render);
+              out = '';
+              res.send = function(s) {
+                return out += s;
+              };
+              res.render = function(file) {
+                return out += file;
+              };
+              cb(req, res);
+              res.end(out);
+              return;
+            }
+          }
+          return next();
+        });
+      };
+    };
+    for (k in _ref) {
+      method = _ref[k];
+      _fn(method);
+    }
+    app.use(function(req, res, next) {
+      res.locals = {};
+      return next();
+    });
+    path = require('path');
+    process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+    app.PORT = process.env.PORT || 3001;
+    app.STATIC = path.join(process.cwd(), 'static', path.sep);
+    app.PUBLIC = path.join(app.STATIC, 'public', path.sep);
+    app.ASSETS = path.join(app.PUBLIC, 'assets', path.sep);
+    app.APP = path.join(app.STATIC, 'app', path.sep);
+    app.CONFIG = path.join(app.STATIC, 'config', path.sep);
+    app.SERVER_CONTROLLERS = path.join(app.APP, 'controllers', path.sep);
+    app.SHARED_CONTROLLERS = path.join(app.ASSETS, 'controllers', path.sep);
+    app.SERVER_MODELS = path.join(app.APP, 'models', path.sep);
+    app.SERVER_HELPERS = path.join(app.APP, 'helpers', path.sep);
+    app.SHARED_HELPERS = path.join(app.ASSETS, 'helpers', path.sep);
+    process.on('uncaughtException', function(err) {
+      if (err.code === 'EADDRINUSE') {
+        process.stderr.write("FATAL: port is already open. kill all node processes and try again.");
+        return process.exit(1);
+      }
+    });
+    return {
+      app: app,
+      connect: connect
+    };
+  };
+
   CoffeeShop.Table = (function() {
 
     function _Class() {

@@ -1,6 +1,55 @@
 sugar = require 'sugar'
 
 module.exports = class CoffeeShop
+  @Server: -> # like Express
+    connect = require 'connect'
+    app = connect()
+    for k, method of methods = ['GET','POST','PUT','DELETE']
+      ((method)=>
+        app[method.toLowerCase()] = (uri, cb) =>
+          app.use (req, res, next) =>
+            if req.method is method
+              if (params=req.url.match(new RegExp "^#{uri}$")) isnt null
+                req.params = params.slice 1
+                console.log "res.send was: ", res.send
+                console.log "res.render was: ", res.render
+                out = ''
+                res.send = (s) -> out += s
+                res.render = (file) -> out += file
+                cb req, res
+                res.end out
+                return
+            next()
+      )(method)
+
+    app.use (req, res, next) ->
+      res.locals = {}
+      next()
+
+    path = require 'path'
+    process.env.NODE_ENV = process.env.NODE_ENV or 'development'
+    app.PORT = process.env.PORT or 3001
+    app.STATIC = path.join process.cwd(), 'static', path.sep
+    app.PUBLIC = path.join app.STATIC, 'public', path.sep
+    app.ASSETS = path.join app.PUBLIC, 'assets', path.sep
+    app.APP = path.join app.STATIC, 'app', path.sep
+    app.CONFIG = path.join app.STATIC, 'config', path.sep
+    app.SERVER_CONTROLLERS = path.join app.APP, 'controllers', path.sep
+    app.SHARED_CONTROLLERS = path.join app.ASSETS, 'controllers', path.sep
+    app.SERVER_MODELS = path.join app.APP, 'models', path.sep
+    app.SERVER_HELPERS = path.join app.APP, 'helpers', path.sep
+    app.SHARED_HELPERS = path.join app.ASSETS, 'helpers', path.sep
+
+    process.on 'uncaughtException', (err) ->
+      if err.code is 'EADDRINUSE'
+        process.stderr.write "FATAL: port is already open. kill all node processes and try again."
+        process.exit 1
+
+    return {
+      app: app
+      connect: connect
+    }
+
   @Table: class # like Arel
     constructor: ->
       @_table = ''
