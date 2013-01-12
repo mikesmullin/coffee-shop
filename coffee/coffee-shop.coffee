@@ -2,18 +2,20 @@ sugar = require 'sugar'
 
 module.exports = class CoffeeShop
   @Server: -> # like Express
+    process.env.NODE_ENV = process.env.NODE_ENV or 'development'
+
     process.on 'uncaughtException', (err) ->
       if err.code is 'EADDRINUSE'
         process.stderr.write "FATAL: port is already open. kill all node processes and try again."
         process.exit 1
 
-    process.env.NODE_ENV = process.env.NODE_ENV or 'development'
-
     connect = require 'connect'
     app     = connect()
     path    = require 'path'
+    async   = require 'async2'
     routes  = {}
 
+    # define path global constants
     app.PORT = process.env.PORT or 3001
     app.STATIC = path.join process.cwd(), 'static', path.sep
     app.PUBLIC = path.join app.STATIC, 'public', path.sep
@@ -26,11 +28,11 @@ module.exports = class CoffeeShop
     app.SERVER_HELPERS = path.join app.APP, 'helpers', path.sep
     app.SHARED_HELPERS = path.join app.ASSETS, 'helpers', path.sep
 
+    # define HTTP VERB methods
     for k, method of methods = ['GET','POST','PUT','DELETE']
       ((method)=>
         app[method.toLowerCase()] = (uri, middlewares..., cb) =>
-
-          # remember route with 'as' alias
+          # remember route by 'as' alias
           options = {}
           for k of middlewares when typeof middlewares[k] is 'object'
             options = middlewares[k]
@@ -42,24 +44,38 @@ module.exports = class CoffeeShop
             routes[options.as] = routes[options.as] or uri # defer to user-specified
 
           app.use (req, res, next) =>
-            if req.method is method
-              if (params=req.url.match(new RegExp "^#{uri}$")) isnt null
-                req.params = params.slice 1
-                out = ''
-                res.send = (s) -> out += s
-                res.render = (file) -> out += file
-                res.navigate = (uri) -> res.redirect uri
-                res.url = join: (parts...) -> parts.join '/'
+            return next() unless req.method is method and
+              (params=req.url.match(new RegExp "^#{uri}$")) isnt null
 
-                app.use middlewares[k] for k of middlewares when typeof middlewares[k] is 'function'
-                app.use (req, res) ->
-                  cb req, res
-                  res.end out
-            next()
+            # I/O request and response helpers
+            out = ''
+            req.params = params.slice 1
+            res.send = (s) -> out += s
+            res.render = (file) -> out += file
+
+            # route middleware
+            flow = async.flow req, res
+            for k of middlewares when typeof middlewares[k] is 'function'
+              ((middleware)->
+                flow.serial (req, res, next) ->
+                  middlewares[k] req, res, (err, warning) ->
+                    if err is false # false breaks middleware chain without throwing error
+                      res.send warning # optional human-friendly error sent to browser
+                      res.end out
+                    else
+                      next err, req, res
+              )(middlewares[k])
+            flow.go (err, req, res) ->
+              return next err if err # errors pass through to connect
+              cb.apply null, args # callback is executed
+              res.end out # aggregate output is flushed
       )(method)
 
+    # general request and response helpers
     app.use (req, res, next) ->
       res.locals = {}
+      res.navigate = (uri) -> res.redirect uri
+      res.url = join: (parts...) -> parts.join '/'
       next()
 
     if process.env.NODE_ENV is 'development'

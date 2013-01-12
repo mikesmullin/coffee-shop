@@ -25,7 +25,8 @@
   "dependencies": {
     "coffee-script": "*",
     "sugar": "*",
-    "connect": "~2.7.2"
+    "connect": "~2.7.2",
+    "async2": "~0.1.6"
   },
   "devDependencies": {
     "chai": "*"

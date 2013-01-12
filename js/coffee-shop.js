@@ -11,18 +11,19 @@ module.exports = CoffeeShop = (function() {
   function CoffeeShop() {}
 
   CoffeeShop.Server = function() {
-    var app, connect, k, method, methods, path, routes, _fn, _ref,
+    var app, async, connect, k, method, methods, path, routes, _fn, _ref,
       _this = this;
+    process.env.NODE_ENV = process.env.NODE_ENV || 'development';
     process.on('uncaughtException', function(err) {
       if (err.code === 'EADDRINUSE') {
         process.stderr.write("FATAL: port is already open. kill all node processes and try again.");
         return process.exit(1);
       }
     });
-    process.env.NODE_ENV = process.env.NODE_ENV || 'development';
     connect = require('connect');
     app = connect();
     path = require('path');
+    async = require('async2');
     routes = {};
     app.PORT = process.env.PORT || 3001;
     app.STATIC = path.join(process.cwd(), 'static', path.sep);
@@ -55,39 +56,42 @@ module.exports = CoffeeShop = (function() {
           routes[options.as] = routes[options.as] || uri;
         }
         return app.use(function(req, res, next) {
-          var out, params;
-          if (req.method === method) {
-            if ((params = req.url.match(new RegExp("^" + uri + "$"))) !== null) {
-              req.params = params.slice(1);
-              out = '';
-              res.send = function(s) {
-                return out += s;
-              };
-              res.render = function(file) {
-                return out += file;
-              };
-              res.navigate = function(uri) {
-                return res.redirect(uri);
-              };
-              res.url = {
-                join: function() {
-                  var parts;
-                  parts = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-                  return parts.join('/');
-                }
-              };
-              for (k in middlewares) {
-                if (typeof middlewares[k] === 'function') {
-                  app.use(middlewares[k]);
-                }
-              }
-              app.use(function(req, res) {
-                cb(req, res);
-                return res.end(out);
-              });
+          var flow, out, params;
+          if (!(req.method === method && (params = req.url.match(new RegExp("^" + uri + "$"))) !== null)) {
+            return next();
+          }
+          out = '';
+          req.params = params.slice(1);
+          res.send = function(s) {
+            return out += s;
+          };
+          res.render = function(file) {
+            return out += file;
+          };
+          flow = async.flow(req, res);
+          for (k in middlewares) {
+            if (typeof middlewares[k] === 'function') {
+              (function(middleware) {
+                return flow.serial(function(req, res, next) {
+                  return middlewares[k](req, res, function(err, warning) {
+                    if (err === false) {
+                      res.send(warning);
+                      return res.end(out);
+                    } else {
+                      return next(err, req, res);
+                    }
+                  });
+                });
+              })(middlewares[k]);
             }
           }
-          return next();
+          return flow.go(function(err, req, res) {
+            if (err) {
+              return next(err);
+            }
+            cb.apply(null, args);
+            return res.end(out);
+          });
         });
       };
     };
@@ -97,6 +101,16 @@ module.exports = CoffeeShop = (function() {
     }
     app.use(function(req, res, next) {
       res.locals = {};
+      res.navigate = function(uri) {
+        return res.redirect(uri);
+      };
+      res.url = {
+        join: function() {
+          var parts;
+          parts = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          return parts.join('/');
+        }
+      };
       return next();
     });
     if (process.env.NODE_ENV === 'development') {
