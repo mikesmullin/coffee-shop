@@ -2,32 +2,18 @@ sugar = require 'sugar'
 
 module.exports = class CoffeeShop
   @Server: -> # like Express
-    connect = require 'connect'
-    app = connect()
-    for k, method of methods = ['GET','POST','PUT','DELETE']
-      ((method)=>
-        app[method.toLowerCase()] = (uri, cb) =>
-          app.use (req, res, next) =>
-            if req.method is method
-              if (params=req.url.match(new RegExp "^#{uri}$")) isnt null
-                req.params = params.slice 1
-                console.log "res.send was: ", res.send
-                console.log "res.render was: ", res.render
-                out = ''
-                res.send = (s) -> out += s
-                res.render = (file) -> out += file
-                cb req, res
-                res.end out
-                return
-            next()
-      )(method)
+    process.on 'uncaughtException', (err) ->
+      if err.code is 'EADDRINUSE'
+        process.stderr.write "FATAL: port is already open. kill all node processes and try again."
+        process.exit 1
 
-    app.use (req, res, next) ->
-      res.locals = {}
-      next()
-
-    path = require 'path'
     process.env.NODE_ENV = process.env.NODE_ENV or 'development'
+
+    connect = require 'connect'
+    app     = connect()
+    path    = require 'path'
+    routes  = {}
+
     app.PORT = process.env.PORT or 3001
     app.STATIC = path.join process.cwd(), 'static', path.sep
     app.PUBLIC = path.join app.STATIC, 'public', path.sep
@@ -40,10 +26,45 @@ module.exports = class CoffeeShop
     app.SERVER_HELPERS = path.join app.APP, 'helpers', path.sep
     app.SHARED_HELPERS = path.join app.ASSETS, 'helpers', path.sep
 
-    process.on 'uncaughtException', (err) ->
-      if err.code is 'EADDRINUSE'
-        process.stderr.write "FATAL: port is already open. kill all node processes and try again."
-        process.exit 1
+    for k, method of methods = ['GET','POST','PUT','DELETE']
+      ((method)=>
+        app[method.toLowerCase()] = (uri, middlewares..., cb) =>
+
+          # remember route with 'as' alias
+          options = {}
+          for k of middlewares when typeof middlewares[k] is 'object'
+            options = middlewares[k]
+            continue
+          if options.as
+            routes[options.as] = uri # user-specified overrides all
+          else
+            options.as = uri.replace(`/[^a-zA-Z+_-]+/g`, '_').replace(`/(^_|_$)/g`,'') # auto-generate
+            routes[options.as] = routes[options.as] or uri # defer to user-specified
+
+          app.use (req, res, next) =>
+            if req.method is method
+              if (params=req.url.match(new RegExp "^#{uri}$")) isnt null
+                req.params = params.slice 1
+                out = ''
+                res.send = (s) -> out += s
+                res.render = (file) -> out += file
+                res.navigate = (uri) -> res.redirect uri
+                res.url = join: (parts...) -> parts.join '/'
+
+                app.use middlewares[k] for k of middlewares when typeof middlewares[k] is 'function'
+                app.use (req, res) ->
+                  cb req, res
+                  res.end out
+            next()
+      )(method)
+
+    app.use (req, res, next) ->
+      res.locals = {}
+      next()
+
+    if process.env.NODE_ENV is 'development'
+      app.get '/shop/routes', (req, res) ->
+        res.send JSON.stringify routes, null, 2
 
     return {
       app: app
