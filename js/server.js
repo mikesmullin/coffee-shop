@@ -36,24 +36,8 @@ module.exports = CoffeeShopServer = function() {
   _ref = methods = ['GET', 'POST', 'PUT', 'DELETE'];
   _fn = function(method) {
     return app[method.toLowerCase()] = function() {
-      var cb, middlewares, options, uri, _i;
+      var cb, middlewares, uri, _i;
       uri = arguments[0], middlewares = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), cb = arguments[_i++];
-      options = {};
-      for (k in middlewares) {
-        if (!(typeof middlewares[k] === 'object')) {
-          continue;
-        }
-        options = middlewares[k];
-        continue;
-      }
-      if (uri === '/') {
-        routes['root'] = '/';
-      } else if (options.as) {
-        routes[options.as] = uri;
-      } else {
-        options.as = uri.replace(/[^a-zA-Z+_-]+/g, '_').replace(/(^_|_$)/g, '');
-        routes[options.as] = routes[options.as] || uri;
-      }
       return app.use(function(req, res, next) {
         var flow, params;
         if (!(req.method === method && (params = req.url.match(new RegExp("^" + uri + "$"))) !== null)) {

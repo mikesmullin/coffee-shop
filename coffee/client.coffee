@@ -11,14 +11,11 @@
     @debug = options.debug or @ENV isnt 'production'
     @trace = options.trace or false
     @started = new Date()
-    @events = {}
-    @on 'hashchange', (hash) ->
-      console.log "sup! hash is now #{hash}"
     $(window).hashchange =>
-      @emit 'hashchange', location.hash
+      @emit 'hashchange', document.location.hash.substr 2
     @on 'ready', =>
       @log 'app ready.'
-      @emit 'hashchange', location.hash or '#!/'
+      @emit 'hashchange', document.location.hash.substr(2) or '/'
     @emit 'ready'
 
   log: (o) ->
@@ -32,6 +29,7 @@
         console.trace()
 
   # EventEmitter clone
+  events: {}
   on: (event, cb) ->
     @events[event] = @events[event] or []
     @events[event].push cb
@@ -42,44 +40,47 @@
     delete @events[event]
 
   request:
-    url: location.hash.substr 2
+    url: ''
 
   response:
     locals: {}
-    navigate: (uri) -> location.href = '#!'+uri
+    navigate: (uri) -> document.location.href = '#!'+uri
     activate: (widget) ->
     send: end = (s) -> $('body').append s
     end: end
     url: join: (parts...) -> parts.join '/'
-    render: (file, options) -> res.send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
-    activate: (file, options) -> res.send "would activate widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+    render: (file, options) -> @send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+    activate: (file, options) -> @send "would activate widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
 
   get: (uri, middlewares..., cb) ->
-    req = @request
-    res = @response
-    next = (err, args...) =>
-      @log "Could not GET #{uri}" # alert box may be more appropriate here
-      @log err if err
-      return
-    return next() unless (params=req.url.match(new RegExp "^#{uri}$")) isnt null
+    @on 'hashchange', (url) =>
+      console.log "route! uri is #{uri} and url is #{url}"
+      @request.url = url
+      req = @request
+      res = @response
+      next = (err, args...) =>
+        @log "Could not GET #{url}" # alert box may be more appropriate here
+        @log err if err
+        return
+      return next() unless (params=req.url.match(new RegExp "^#{uri}$")) isnt null
 
-    # I/O request and response helpers
-    req.params = params.slice 1
+      # I/O request and response helpers
+      req.params = params.slice 1
 
-    # route middleware
-    flow = async.flow req, res
-    for k of middlewares when typeof middlewares[k] is 'function'
-      ((middleware)->
-        flow.serial (req, res, next) ->
-          middlewares[k] req, res, (err, warning) ->
-            if err is false # false breaks middleware chain without throwing error
-              res.end warning # optional human-friendly error sent to browser
-            else
-              next err, req, res
-      )(middlewares[k])
-    flow.go (err, req, res) ->
-      return next err if err # errors pass through to connect
-      cb req, res # callback is executed
+      # route middleware
+      flow = async.flow req, res
+      for k of middlewares when typeof middlewares[k] is 'function'
+        ((middleware)->
+          flow.serial (req, res, next) ->
+            middlewares[k] req, res, (err, warning) ->
+              if err is false # false breaks middleware chain without throwing error
+                res.end warning # optional human-friendly error sent to browser
+              else
+                next err, req, res
+        )(middlewares[k])
+      flow.go (err, req, res) ->
+        return next err if err # errors pass through to connect
+        cb req, res # callback is executed
 
 # require() emulation for pre-aggregated js
 @__exported__ = {}

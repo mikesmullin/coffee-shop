@@ -4,6 +4,7 @@ var CoffeeShopClient,
   _this = this;
 
 this.app = new (CoffeeShopClient = (function() {
+  var end;
 
   function CoffeeShopClient() {}
 
@@ -14,16 +15,12 @@ this.app = new (CoffeeShopClient = (function() {
     this.debug = options.debug || this.ENV !== 'production';
     this.trace = options.trace || false;
     this.started = new Date();
-    this.events = {};
-    this.on('hashchange', function(hash) {
-      return console.log("sup! hash is now " + hash);
-    });
     $(window).hashchange(function() {
-      return this.emit('hashchange', location.hash);
+      return _this.emit('hashchange', document.location.hash.substr(2));
     });
     this.on('ready', function() {
       _this.log('app ready.');
-      return _this.emit('hashchange', location.hash);
+      return _this.emit('hashchange', document.location.hash.substr(2) || '/');
     });
     return this.emit('ready');
   };
@@ -38,6 +35,8 @@ this.app = new (CoffeeShopClient = (function() {
       }
     }
   };
+
+  CoffeeShopClient.prototype.events = {};
 
   CoffeeShopClient.prototype.on = function(event, cb) {
     this.events[event] = this.events[event] || [];
@@ -56,6 +55,82 @@ this.app = new (CoffeeShopClient = (function() {
 
   CoffeeShopClient.prototype.removeAllListeners = function(event) {
     return delete this.events[event];
+  };
+
+  CoffeeShopClient.prototype.request = {
+    url: ''
+  };
+
+  CoffeeShopClient.prototype.response = {
+    locals: {},
+    navigate: function(uri) {
+      return document.location.href = '#!' + uri;
+    },
+    activate: function(widget) {},
+    send: end = function(s) {
+      return $('body').append(s);
+    },
+    end: end,
+    url: {
+      join: function() {
+        var parts;
+        parts = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        return parts.join('/');
+      }
+    },
+    render: function(file, options) {
+      return this.send("would render view template \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
+    },
+    activate: function(file, options) {
+      return this.send("would activate widget \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
+    }
+  };
+
+  CoffeeShopClient.prototype.get = function() {
+    var cb, middlewares, uri, _i,
+      _this = this;
+    uri = arguments[0], middlewares = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), cb = arguments[_i++];
+    return this.on('hashchange', function(url) {
+      var flow, k, next, params, req, res;
+      console.log("route! uri is " + uri + " and url is " + url);
+      _this.request.url = url;
+      req = _this.request;
+      res = _this.response;
+      next = function() {
+        var args, err;
+        err = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+        _this.log("Could not GET " + url);
+        if (err) {
+          _this.log(err);
+        }
+      };
+      if ((params = req.url.match(new RegExp("^" + uri + "$"))) === null) {
+        return next();
+      }
+      req.params = params.slice(1);
+      flow = async.flow(req, res);
+      for (k in middlewares) {
+        if (typeof middlewares[k] === 'function') {
+          (function(middleware) {
+            return flow.serial(function(req, res, next) {
+              return middlewares[k](req, res, function(err, warning) {
+                if (err === false) {
+                  return res.end(warning);
+                } else {
+                  return next(err, req, res);
+                }
+              });
+            });
+          })(middlewares[k]);
+        }
+      }
+      return flow.go(function(err, req, res) {
+        if (err) {
+          return next(err);
+        }
+        return cb(req, res);
+      });
+    });
   };
 
   return CoffeeShopClient;
