@@ -13,7 +13,7 @@ describe 'CoffeeShop', ->
     beforeEach ->
       class User extends CoffeeShop.Model
         constructor: ->
-          (super)
+          super
           @attr_accessible 'first_name last_name'.split ' '
           # pending
           #@has_one 'credit_card'
