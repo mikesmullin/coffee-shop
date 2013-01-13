@@ -71,18 +71,22 @@ this.app = new (CoffeeShopClient = (function() {
       return $('body').append(s);
     },
     end: end,
-    url: {
-      join: function() {
-        var parts;
-        parts = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-        return parts.join('/');
-      }
-    },
     render: function(file, options) {
       return this.send("would render view template \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
     },
     activate: function(file, options) {
-      return this.send("would activate widget \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
+      var e, k, scope, widget;
+      this.log("activating widget \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
+      widget = require("widgets/" + file)(app);
+      e = $(widget.e).appendTo(options.within);
+      scope = {};
+      for (k in widget.elements) {
+        scope[k] = $(widget.elements[k], e);
+      }
+      for (k in widget.events) {
+        $(e).bind(k, widget.events[k]);
+      }
+      return e;
     }
   };
 
