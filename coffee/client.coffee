@@ -55,9 +55,8 @@ app = new class CoffeeShopClient
     end: end
     render: (file, options) -> @send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
     activate: (file, options) ->
-      app.log "activating widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
       widget = require("widgets/#{file}")(app)
-      e = $(widget.e).appendTo(options.within)
+      e = $(widget.e).appendTo(options.within or app.options.renderTo)
       scope = {}
       for k of widget.elements
         scope[k] = $(widget.elements[k], e)
