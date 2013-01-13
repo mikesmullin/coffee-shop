@@ -1,5 +1,7 @@
-module.exports = Server = -> # like Express.js with a few twists
-  process.env.NODE_ENV = process.env.NODE_ENV or 'development'
+# like Express.js + Spine.js + Joosy, with a few twists
+# API for the server
+module.exports = CoffeeShopServer = ->
+  global.exports = (file, o) -> o # companion placeholder for client-side modules
 
   process.on 'uncaughtException', (err) ->
     if err.code is 'EADDRINUSE'
@@ -13,6 +15,7 @@ module.exports = Server = -> # like Express.js with a few twists
   routes  = {}
 
   # define path global constants
+  app.ENV = process.env.NODE_ENV = process.env.NODE_ENV or 'development'
   app.PORT = process.env.PORT or 3001
   app.STATIC = path.join process.cwd(), 'static', path.sep
   app.PUBLIC = path.join app.STATIC, 'public', path.sep
@@ -113,6 +116,9 @@ module.exports = Server = -> # like Express.js with a few twists
     connect: connect
     flow: flow
     fetch: (file, args..., cb) ->
+      Module = (c,k,o) ->
+        module.exports = (args...) ->
+          o
       require(file).apply null, args
       cb null
   }
