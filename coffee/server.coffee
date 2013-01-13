@@ -76,10 +76,6 @@ module.exports = CoffeeShopServer = ->
     for k of o
       app.response.locals[k] = app.response.locals[k] or o[k]
 
-  if process.env.NODE_ENV is 'development'
-    app.get '/shop/routes', (req, res) ->
-      res.send JSON.stringify routes, null, 2
-
   flow = new async
   app.bootstrap = ->
     flow.go ->

@@ -64,6 +64,17 @@ app = new (CoffeeShopClient = (function() {
     return delete this.events[event];
   };
 
+  CoffeeShopClient.prototype.flahes = {};
+
+  CoffeeShopClient.prototype.flash = function(type, msg) {
+    if (msg) {
+      flashes[type] = flashes[type] || [];
+      return flashes[type].push(msg);
+    } else {
+      return flashes[type];
+    }
+  };
+
   CoffeeShopClient.prototype.request = {
     url: ''
   };
@@ -82,19 +93,31 @@ app = new (CoffeeShopClient = (function() {
       return this.send("would render view template \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
     },
     activate: function(file, options) {
-      var e, k, scope, widget;
-      app.log("activating widget \"" + file + "\" with options: " + (JSON.stringify(options, null, 2)));
+      var e, html, k, scope, widget;
+      options = options || {};
       widget = require("widgets/" + file)(app);
-      e = $(widget.e).appendTo(options.within);
+      html = $(widget.markup).appendTo(options.within || app.options.renderTo);
+      e = $(widget.e, html);
       scope = {};
+      if (widget.body_class) {
+        document.body.className = widget.body_class;
+      } else {
+        document.body.className = '';
+      }
       for (k in widget.elements) {
         scope[k] = $(widget.elements[k], e);
       }
       for (k in widget.events) {
-        $(e).bind(k, widget.events[k]);
+        $(e).bind(k, function() {
+          return widget.events[k].apply(scope, arguments);
+        });
       }
       return e;
     }
+  };
+
+  CoffeeShopClient.prototype.resource = function(name) {
+    return new (require("resources/" + name)(app));
   };
 
   CoffeeShopClient.prototype.get = function() {
@@ -103,14 +126,12 @@ app = new (CoffeeShopClient = (function() {
     uri = arguments[0], middlewares = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), cb = arguments[_i++];
     return this.on('hashchange', function(url) {
       var flow, k, next, params, req, res;
-      _this.log("route! uri is " + uri + " and url is " + url);
       _this.request.url = url;
       req = _this.request;
       res = _this.response;
       next = function() {
         var args, err;
         err = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-        _this.log("Could not GET " + url);
         if (err) {
           _this.log(err);
         }
@@ -118,6 +139,7 @@ app = new (CoffeeShopClient = (function() {
       if ((params = req.url.match(new RegExp("^" + uri + "$"))) === null) {
         return next();
       }
+      _this.log("GET " + url);
       req.params = params.slice(1);
       flow = async.flow(req, res);
       for (k in middlewares) {

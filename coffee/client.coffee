@@ -44,6 +44,16 @@ app = new class CoffeeShopClient
   removeAllListeners: (event) ->
     delete @events[event]
 
+  # connect-flash clone
+  # TODO: turn this into a widget
+  flahes: {}
+  flash: (type, msg) ->
+    if msg
+      flashes[type] = flashes[type] or []
+      flashes[type].push msg
+    else
+      flashes[type]
+
   request:
     url: ''
 
@@ -55,26 +65,34 @@ app = new class CoffeeShopClient
     end: end
     render: (file, options) -> @send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
     activate: (file, options) ->
+      options = options or {}
       widget = require("widgets/#{file}")(app)
-      e = $(widget.e).appendTo(options.within or app.options.renderTo)
+      html = $(widget.markup).appendTo(options.within or app.options.renderTo)
+      e = $(widget.e, html)
       scope = {}
+      if widget.body_class
+        document.body.className = widget.body_class
+      else
+        document.body.className = ''
       for k of widget.elements
         scope[k] = $(widget.elements[k], e)
       for k of widget.events
-        $(e).bind(k, widget.events[k])
+        $(e).bind(k, -> widget.events[k].apply scope, arguments)
       return e
+  resource: (name) ->
+    new (require("resources/#{name}")(app))
 
   get: (uri, middlewares..., cb) ->
     @on 'hashchange', (url) =>
-      @log "route! uri is #{uri} and url is #{url}"
       @request.url = url
       req = @request
       res = @response
       next = (err, args...) =>
-        @log "Could not GET #{url}" # alert box may be more appropriate here
         @log err if err
         return
       return next() unless (params=req.url.match(new RegExp "^#{uri}$")) isnt null
+
+      @log "GET #{url}"
 
       # I/O request and response helpers
       req.params = params.slice 1

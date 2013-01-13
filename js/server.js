@@ -112,11 +112,6 @@ module.exports = CoffeeShopServer = function() {
     }
     return _results;
   };
-  if (process.env.NODE_ENV === 'development') {
-    app.get('/shop/routes', function(req, res) {
-      return res.send(JSON.stringify(routes, null, 2));
-    });
-  }
   flow = new async;
   app.bootstrap = function() {
     return flow.go(function() {
