@@ -34,19 +34,6 @@ module.exports = CoffeeShopServer = ->
   for k, method of methods = ['GET','POST','PUT','DELETE']
     ((method)=>
       app[method.toLowerCase()] = (uri, middlewares..., cb) =>
-        # remember route by 'as' alias
-        options = {}
-        for k of middlewares when typeof middlewares[k] is 'object'
-          options = middlewares[k]
-          continue
-        if uri is '/'
-          routes['root'] = '/'
-        else if options.as
-          routes[options.as] = uri # user-specified overrides all
-        else
-          options.as = uri.replace(`/[^a-zA-Z+_-]+/g`, '_').replace(`/(^_|_$)/g`,'') # auto-generate
-          routes[options.as] = routes[options.as] or uri # defer to user-specified
-
         app.use (req, res, next) =>
           return next() unless req.method is method and
             (params=req.url.match(new RegExp "^#{uri}$")) isnt null

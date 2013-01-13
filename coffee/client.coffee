@@ -14,11 +14,11 @@
     @events = {}
     @on 'hashchange', (hash) ->
       console.log "sup! hash is now #{hash}"
-    $(window).hashchange ->
+    $(window).hashchange =>
       @emit 'hashchange', location.hash
     @on 'ready', =>
       @log 'app ready.'
-      @emit 'hashchange', location.hash
+      @emit 'hashchange', location.hash or '#!/'
     @emit 'ready'
 
   log: (o) ->
@@ -41,42 +41,45 @@
   removeAllListeners: (event) ->
     delete @events[event]
 
+  request:
+    url: location.hash.substr 2
+
+  response:
+    locals: {}
+    navigate: (uri) -> location.href = '#!'+uri
+    activate: (widget) ->
+    send: end = (s) -> $('body').append s
+    end: end
+    url: join: (parts...) -> parts.join '/'
+    render: (file, options) -> res.send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+    activate: (file, options) -> res.send "would activate widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+
   get: (uri, middlewares..., cb) ->
-    # remember route by 'as' alias
-    options = {}
-    for k of middlewares when typeof middlewares[k] is 'object'
-      options = middlewares[k]
-      continue
-    if uri is '/'
-      routes['root'] = '/'
-    else if options.as
-      routes[options.as] = uri # user-specified overrides all
-    else
-      options.as = uri.replace(`/[^a-zA-Z+_-]+/g`, '_').replace(`/(^_|_$)/g`,'') # auto-generate
-      routes[options.as] = routes[options.as] or uri # defer to user-specified
+    req = @request
+    res = @response
+    next = (err, args...) =>
+      @log "Could not GET #{uri}" # alert box may be more appropriate here
+      @log err if err
+      return
+    return next() unless (params=req.url.match(new RegExp "^#{uri}$")) isnt null
 
-    app.use (req, res, next) =>
-      return next() unless req.method is method and
-        (params=req.url.match(new RegExp "^#{uri}$")) isnt null
+    # I/O request and response helpers
+    req.params = params.slice 1
 
-      # I/O request and response helpers
-      req.params = params.slice 1
-      app.response.send = res.send = res.end
-
-      # route middleware
-      flow = async.flow req, res
-      for k of middlewares when typeof middlewares[k] is 'function'
-        ((middleware)->
-          flow.serial (req, res, next) ->
-            middlewares[k] req, res, (err, warning) ->
-              if err is false # false breaks middleware chain without throwing error
-                res.end warning # optional human-friendly error sent to browser
-              else
-                next err, req, res
-        )(middlewares[k])
-      flow.go (err, req, res) ->
-        return next err if err # errors pass through to connect
-        cb req, res # callback is executed
+    # route middleware
+    flow = async.flow req, res
+    for k of middlewares when typeof middlewares[k] is 'function'
+      ((middleware)->
+        flow.serial (req, res, next) ->
+          middlewares[k] req, res, (err, warning) ->
+            if err is false # false breaks middleware chain without throwing error
+              res.end warning # optional human-friendly error sent to browser
+            else
+              next err, req, res
+      )(middlewares[k])
+    flow.go (err, req, res) ->
+      return next err if err # errors pass through to connect
+      cb req, res # callback is executed
 
 # require() emulation for pre-aggregated js
 @__exported__ = {}
