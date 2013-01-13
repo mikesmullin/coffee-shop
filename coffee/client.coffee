@@ -48,9 +48,17 @@
     activate: (widget) ->
     send: end = (s) -> $('body').append s
     end: end
-    url: join: (parts...) -> parts.join '/'
     render: (file, options) -> @send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
-    activate: (file, options) -> @send "would activate widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+    activate: (file, options) ->
+      @log "activating widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+      widget = require("widgets/#{file}")(app)
+      e = $(widget.e).appendTo(options.within)
+      scope = {}
+      for k of widget.elements
+        scope[k] = $(widget.elements[k], e)
+      for k of widget.events
+        $(e).bind(k, widget.events[k])
+      return e
 
   get: (uri, middlewares..., cb) ->
     @on 'hashchange', (url) =>
