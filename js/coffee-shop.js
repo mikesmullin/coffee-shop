@@ -51,22 +51,21 @@ module.exports = CoffeeShop = (function() {
           options = middlewares[k];
           continue;
         }
-        if (options.as) {
+        if (uri === '/') {
+          routes['root'] = '/';
+        } else if (options.as) {
           routes[options.as] = uri;
         } else {
           options.as = uri.replace(/[^a-zA-Z+_-]+/g, '_').replace(/(^_|_$)/g, '');
           routes[options.as] = routes[options.as] || uri;
         }
         return app.use(function(req, res, next) {
-          var flow, out, params;
+          var flow, params;
           if (!(req.method === method && (params = req.url.match(new RegExp("^" + uri + "$"))) !== null)) {
             return next();
           }
-          out = '';
           req.params = params.slice(1);
-          app.response.send = res.send = function(s) {
-            return out += s;
-          };
+          app.response.send = res.send = res.end;
           flow = async.flow(req, res);
           for (k in middlewares) {
             if (typeof middlewares[k] === 'function') {
@@ -74,8 +73,7 @@ module.exports = CoffeeShop = (function() {
                 return flow.serial(function(req, res, next) {
                   return middlewares[k](req, res, function(err, warning) {
                     if (err === false) {
-                      res.send(warning);
-                      return res.end(out);
+                      return res.end(warning);
                     } else {
                       return next(err, req, res);
                     }
@@ -88,8 +86,7 @@ module.exports = CoffeeShop = (function() {
             if (err) {
               return next(err);
             }
-            cb(req, res);
-            return res.end(out);
+            return cb(req, res);
           });
         });
       };

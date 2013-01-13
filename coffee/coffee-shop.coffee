@@ -39,7 +39,9 @@ module.exports = class CoffeeShop
           for k of middlewares when typeof middlewares[k] is 'object'
             options = middlewares[k]
             continue
-          if options.as
+          if uri is '/'
+            routes['root'] = '/'
+          else if options.as
             routes[options.as] = uri # user-specified overrides all
           else
             options.as = uri.replace(`/[^a-zA-Z+_-]+/g`, '_').replace(`/(^_|_$)/g`,'') # auto-generate
@@ -50,9 +52,8 @@ module.exports = class CoffeeShop
               (params=req.url.match(new RegExp "^#{uri}$")) isnt null
 
             # I/O request and response helpers
-            out = ''
             req.params = params.slice 1
-            app.response.send = res.send = (s) -> out += s
+            app.response.send = res.send = res.end
 
             # route middleware
             flow = async.flow req, res
@@ -61,15 +62,13 @@ module.exports = class CoffeeShop
                 flow.serial (req, res, next) ->
                   middlewares[k] req, res, (err, warning) ->
                     if err is false # false breaks middleware chain without throwing error
-                      res.send warning # optional human-friendly error sent to browser
-                      res.end out
+                      res.end warning # optional human-friendly error sent to browser
                     else
                       next err, req, res
               )(middlewares[k])
             flow.go (err, req, res) ->
               return next err if err # errors pass through to connect
               cb req, res # callback is executed
-              res.end out # aggregate output is flushed
       )(method)
 
     # general request and response helpers
