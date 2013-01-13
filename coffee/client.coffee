@@ -4,28 +4,33 @@
 # NOTICE: include async2 before this lib
 # NOTICE: include before this lib for legacy browser hashchange event support:
 #         https://raw.github.com/cowboy/jquery-hashchange/v1.3/jquery.ba-hashchange.js
-@app = new class CoffeeShopClient
+app = new class CoffeeShopClient
   bootstrap: (env, options) ->
     @ENV = env or 'production'
-    options = options or {}
-    @debug = options.debug or @ENV isnt 'production'
-    @trace = options.trace or false
-    @started = new Date()
+    @options = options or {}
+    @options.debug = options.debug or @ENV isnt 'production'
+    @options.trace = options.trace or false
+    @options.started = new Date()
+    @options.renderTo = options.renderTo or 'body'
+    prev_uri = ''
     $(window).hashchange =>
-      @emit 'hashchange', document.location.hash.substr 2
+      uri = document.location.hash.substr 2
+      if uri isnt prev_uri
+        $(@options.renderTo).empty() # clear canvas
+        @emit 'hashchange', uri
     @on 'ready', =>
       @log 'app ready.'
       @emit 'hashchange', document.location.hash.substr(2) or '/'
     @emit 'ready'
 
   log: (o) ->
-    if @debug and console
+    if @options.debug and console
       current = new Date()
       console.log if typeof o is 'string'
-          "[#{(current - @started) / 1000}s] #{o}"
+          "[#{(current - @options.started) / 1000}s] #{o}"
         else
           o
-      if @trace
+      if @options.trace
         console.trace()
 
   # EventEmitter clone
@@ -50,7 +55,7 @@
     end: end
     render: (file, options) -> @send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
     activate: (file, options) ->
-      @log "activating widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+      app.log "activating widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
       widget = require("widgets/#{file}")(app)
       e = $(widget.e).appendTo(options.within)
       scope = {}
@@ -62,7 +67,7 @@
 
   get: (uri, middlewares..., cb) ->
     @on 'hashchange', (url) =>
-      console.log "route! uri is #{uri} and url is #{url}"
+      @log "route! uri is #{uri} and url is #{url}"
       @request.url = url
       req = @request
       res = @response
@@ -90,8 +95,14 @@
         return next err if err # errors pass through to connect
         cb req, res # callback is executed
 
+  render: (template_fn, locals={}) ->
+    engine = new CoffeeTemplates
+      format: false
+      globals: require('helpers/templates')()
+    engine.render template_fn, locals
+
 # require() emulation for pre-aggregated js
-@__exported__ = {}
-@module = {}
-@require = (file) => @__exported__[file]
-@global = exports: (file, o) => @__exported__[file] = o
+__exported__ = {}
+module = {}
+require = (file) -> __exported__[file]
+global = exports: (file, o) -> __exported__[file] = o
