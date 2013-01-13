@@ -56,13 +56,10 @@ task 'open', 'start main process loop', ->
     ,
       in: 'precompile/server/config'
       out: 'static/config'
-    ,
-      in: 'precompile/shared/assets'
-      out: asset_path
   ], '/**/*.{js,json}.coffee', asset.common_compiler()
 
   asset.watch 'coffeestylesheets', [
-    in: 'precompile/assets/stylesheets'
+    in: 'precompile/shared/assets/stylesheets'
     out: asset_path
   # filenames with underscore prefix are only compiled via #= require directive
   ], '/**/!(@(_))*.css.coffee', (o) -> asset.common_compiler(
@@ -70,7 +67,7 @@ task 'open', 'start main process loop', ->
       format: true
       globals: require_fresh path.xplat __dirname, 'static/app/helpers/stylesheets'
     sprite_options:
-      image_path: path.xplat 'precompile/assets/sprites'
+      image_path: path.xplat 'precompile/shared/assets/sprites'
       sprite_path: path.xplat asset_path
       sprite_url: '/assets/' # TODO: include cdn_url or use relative here?
       #pngcrush: 'pngcrush' # should probably only be run for production
