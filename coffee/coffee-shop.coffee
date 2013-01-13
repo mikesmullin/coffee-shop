@@ -27,6 +27,8 @@ module.exports = class CoffeeShop
     app.SERVER_MODELS = path.join app.APP, 'models', path.sep
     app.SERVER_HELPERS = path.join app.APP, 'helpers', path.sep
     app.SHARED_HELPERS = path.join app.ASSETS, 'helpers', path.sep
+    app.SERVER_VIEWS = path.join app.APP, 'views', path.sep
+    app.SERVER_LAYOUTS = path.join app.VIEWS, 'layouts', path.sep
 
     # define HTTP VERB methods
     for k, method of methods = ['GET','POST','PUT','DELETE']
@@ -50,8 +52,7 @@ module.exports = class CoffeeShop
             # I/O request and response helpers
             out = ''
             req.params = params.slice 1
-            res.send = (s) -> out += s
-            res.render = (file) -> out += file
+            app.response.send = res.send = (s) -> out += s
 
             # route middleware
             flow = async.flow req, res
@@ -67,24 +68,57 @@ module.exports = class CoffeeShop
               )(middlewares[k])
             flow.go (err, req, res) ->
               return next err if err # errors pass through to connect
-              cb.apply null, args # callback is executed
+              cb req, res # callback is executed
               res.end out # aggregate output is flushed
       )(method)
 
     # general request and response helpers
+    app.request = {}
+    app.response = { locals: {} }
     app.use (req, res, next) ->
       res.locals = {}
       res.navigate = (uri) -> res.redirect uri
       res.url = join: (parts...) -> parts.join '/'
+      res.render = (file, options) -> res.send "would render view template \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+      res.activate = (file, options) -> res.send "would activate widget \"#{file}\" with options: #{JSON.stringify options, null, 2}"
+      for k of app.request
+        req[k] = app.request[k]
+      for k of app.response
+        res[k] = app.response[k]
       next()
+    app.locals = (o) ->
+      for k of o
+        app.response.locals[k] = app.response.locals[k] or o[k]
 
     if process.env.NODE_ENV is 'development'
       app.get '/shop/routes', (req, res) ->
         res.send JSON.stringify routes, null, 2
 
+    flow = new async
+    app.bootstrap = ->
+      flow.go ->
+        # a callback can be provided when bootstrapping,
+        # in which case we stop short of opening socket
+        if typeof app.BOOTSTRAP is 'function'
+          process.nextTick ->
+            app.BOOTSTRAP app # indicate readiness
+        else # open socket
+          server = app.listen app.PORT, ->
+            console.log "worker #{process.pid} listening on http://localhost:#{app.PORT}/"
+
+          # report exception leaks
+          process.on 'uncaughtException', (err) ->
+            process.stderr.write "\nWARNING: handle your exceptions better: \n\n"+err.stack+"\n\n"
+            server.close() if server
+            process.exit 1
+
     return {
       app: app
       connect: connect
+      flow: flow
+      fetch: (file, args..., cb) ->
+        require(file).apply null, args
+        cb null
     }
 
   @Table: class # like Arel
