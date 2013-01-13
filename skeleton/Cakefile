@@ -15,45 +15,57 @@ task 'open', 'start main process loop', ->
     child_processes.node.kill 'SIGTERM'
 
   asset.watch 'coffeescripts', [
-      in: 'precompile'
-      suffix: '/*.js.coffee'
+      in: 'precompile/server'
+      suffix: '/*.{js,json}.coffee'
       out: ''
     ,
-      in: 'precompile/db'
+      in: 'precompile/shared'
+      suffix: '/*.{js,json}.coffee'
+      out: asset_path
+    ,
+      in: 'precompile/server/db'
       suffix: '/seeds.js.coffee'
       out: 'static/db'
     ,
-      in: 'precompile/config'
+      in: 'precompile/server/config'
       out: 'static/config'
     ,
-      in: 'precompile/controllers/server'
+      in: 'precompile/server/controllers'
       out: 'static/app/controllers'
     ,
-      in: 'precompile/controllers/shared'
+      in: 'precompile/shared/controllers'
       out: "#{asset_path}/controllers"
     ,
-      in: 'precompile/models/server'
+      in: 'precompile/server/models'
       out: 'static/app/models'
     ,
-      in: 'precompile/models/shared'
-      out: "#{asset_path}/models"
+      in: 'precompile/shared/resources'
+      out: "#{asset_path}/resources"
     ,
-      in: 'precompile/helpers/server'
-      out: 'static/app/helpers'
+      in: 'precompile/server/helpers'
+      out: "static/app/helpers"
     ,
-      in: 'precompile/helpers/shared'
+      in: 'precompile/shared/helpers'
       out: "#{asset_path}/helpers"
     ,
-      in: 'precompile/assets/behaviors'
+      in: 'precompile/shared/widgets'
+      out: "#{asset_path}/widgets"
+    ,
+      in: 'precompile/shared/assets/behaviors'
       out: asset_path
-  # filenames with underscore prefix are only compiled via #= require directive
-  ], '/**/!(@(_))*.{js,js.coffee}', asset.common_compiler()
+    ,
+      in: 'precompile/server/config'
+      out: 'static/config'
+    ,
+      in: 'precompile/shared/assets'
+      out: asset_path
+  ], '/**/*.{js,json}.coffee', asset.common_compiler()
 
   asset.watch 'coffeestylesheets', [
     in: 'precompile/assets/stylesheets'
     out: asset_path
   # filenames with underscore prefix are only compiled via #= require directive
-  ], '/**/!(@(_))*.{css,css.coffee}', (o) -> asset.common_compiler(
+  ], '/**/!(@(_))*.css.coffee', (o) -> asset.common_compiler(
     render_options:
       format: true
       globals: require_fresh path.xplat __dirname, 'static/app/helpers/stylesheets'
@@ -66,11 +78,8 @@ task 'open', 'start main process loop', ->
   )(o)
 
   asset.watch 'coffeetemplates', [
-      in: 'precompile/views/server'
-      out: 'static/app/views'
-    ,
-      in: 'precompile/views/shared'
-      out: asset_path
+    in: 'precompile/server/views'
+    out: 'static/app/views'
   ], '/**/*.html.coffee', (o) ->
     # if ANY template file changes, ALL must be recompiled
     # because they are aggregated into a single templates.js file and function()
@@ -84,18 +93,12 @@ task 'open', 'start main process loop', ->
   asset.watch 'javascript', [
       in: 'static/app/**'
     ,
+      in: 'static/public/assets/controllers/**'
+    ,
       in: ''
   ], '/*.js', (o) ->
     asset.notify 'gaze', "#{o.infile} changed. restarting node...", 'pending', false, true
     child_processes.node.kill 'SIGTERM'
-
-  asset.watch 'coffeejson', [
-    in: 'precompile/config'
-    out: 'static/config'
-  ,
-    in: 'precompile/assets'
-    out: asset_path
-  ], '/**/*.json.coffee', asset.common_compiler()
 
   #asset.child_process_loop child_processes, 'node-inspector', 'node-inspector'
   asset.child_process_loop child_processes, 'node', 'node', ['server.js']
@@ -103,7 +106,7 @@ task 'open', 'start main process loop', ->
     process.stderr.write "\nWARNING: handle your exceptions better: \n\n"+err.stack+"\n\n"
     process.exit 1
 
-db_config = require(path.xplat process.cwd(), 'static/config/database.json')[process.env.NODE_ENV]
+db_name = require(path.xplat process.cwd(), 'static/config/database.json')[process.env.NODE_ENV or 'development'].database
 
 task 'db', 'opens application database in cli', ->
   console.log "REMEMBER: CTRL+D to exit"

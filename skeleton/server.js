@@ -1,213 +1,162 @@
-var app, async, cb, express, flow, fs, path, server, sugar,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var app, connect, fetch, flow, require_fresh, _ref;
 
-path = require('path');
+_ref = require('coffee-shop').Server(), app = _ref.app, connect = _ref.connect, fetch = _ref.fetch, flow = _ref.flow;
 
-fs = require('fs');
+app.use(connect.logger('dev'));
 
-sugar = require('sugar');
+app.use(connect["static"](app.PUBLIC));
 
-express = require('express');
+app.use(connect.methodOverride());
 
-async = require('async2');
+app.use(connect.cookieParser());
 
-app = express();
-
-server = undefined;
-
-cb = undefined;
-
-module.exports = function(f) {
-  return cb = f;
-};
-
-flow = new async;
-
-process.on('uncaughtException', function(err) {
-  if (err.code === 'EADDRINUSE') {
-    return process.stderr.write("FATAL: port is already open. kill all node processes and try again.");
-  } else {
-    process.stderr.write("\nWARNING: handle your exceptions better: \n\n" + err.stack + "\n\n");
-    if (server) {
-      server.close();
-    }
-    return process.exit(1);
-  }
-});
+app.use(connect.bodyParser());
 
 flow.serial(function(next) {
-  var require_fresh;
-  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-  app.PORT = process.env.PORT || 3001;
-  app.STATIC = path.join(__dirname, 'static', path.sep);
-  app.PUBLIC = path.join(app.STATIC, 'public', path.sep);
-  app.ASSETS = path.join(app.PUBLIC, 'assets', path.sep);
-  app.APP = path.join(app.STATIC, 'app', path.sep);
-  app.SERVER_CONTROLLERS = path.join(app.APP, 'controllers', path.sep);
-  app.SERVER_MODELS = path.join(app.APP, 'models', path.sep);
-  app.SERVER_HELPERS = path.join(app.APP, 'helpers', path.sep);
-  app.SHARED_HELPERS = path.join(app.ASSETS, 'helpers', path.sep);
-  app.set('title', '');
-  require_fresh = function(a) {
-    delete require.cache[require.resolve(a)];
-    return require(a);
-  };
-  app.locals(require_fresh(app.SHARED_HELPERS + 'templates'));
-  app.response._render = app.response.render;
-  app.response.render = function(name, options, cb) {
-    options = options || {};
-    options.view = name;
-    options.layout = options.layout ? path.join('shared', 'layouts', options.layout) : path.join('shared', 'layouts', 'application');
-    if (name.indexOf('server' + path.sep) === 0) {
-      name = path.join('app', 'views', 'templates');
+  var db_config, db_name, mysql;
+  mysql = require('mysql');
+  db_config = require(app.CONFIG + 'database.json')[process.env.NODE_ENV];
+  db_name = db_config.database;
+  delete db_config.database;
+  app.db = mysql.createConnection(db_config);
+  app.db.on('error', function(err) {
+    if (err.code === 'ER_BAD_DB_ERROR') {
+      return process.stderr.write("WARNING: could not locate database \"" + db_config.database + "\"\n");
     } else {
-      name = path.join('public', 'assets', 'templates');
-    }
-    return this._render(name, options, cb);
-  };
-  app.set('view engine', 'js');
-  app.set('views', app.STATIC);
-  app.engine('js', function(file, options, cb) {
-    var render;
-    fs.readFile(file, 'utf8', function(err, templates) {
-      if (file.indexOf(path.join('static', 'app', 'views', 'templates.js')) !== -1) {
-        return fs.readFile(app.ASSETS + 'templates.js', 'utf8', function(err, shared_templates) {
-          templates = templates.split("\n");
-          templates.splice(-2, 0, shared_templates.split("\n").slice(2, -2).join("\n"));
-          return render(templates.join("\n"));
-        });
-      } else {
-        return render(templates);
-      }
-    });
-    return render = function(js) {
-      eval(js);
-      return cb(null, templates(options.view, options));
-    };
-  });
-  app.use(express["static"](app.PUBLIC));
-  return next();
-});
-
-flow.serial(function(next) {
-  var db_file, sql;
-  sql = require('node-sqlite-purejs');
-  return sql.open(db_file = "" + app.STATIC + "db/" + process.env.NODE_ENV + ".sqlite", {}, function(err, db) {
-    if (err) {
       throw err;
     }
-    app.db = db;
-    console.log("opened db " + db_file);
-    app.require_model = function(file) {
-      var Model;
-      Model = require(app.SERVER_MODELS + file);
-      Model.prototype.execute_sql = function(q, cb) {
-        console.log("executing sql: " + q);
-        return app.db.exec(q, cb);
+  });
+  return app.db.connect(function() {
+    return app.db.query("USE `" + db_name + "`;", function() {
+      app.require_model = function(file) {
+        var Model;
+        Model = require(app.SERVER_MODELS + file);
+        Model.prototype.execute_sql = function(q, cb) {
+          console.log("executing sql: " + q);
+          return app.db.query(q, cb);
+        };
+        return Model;
       };
-      return Model;
-    };
-    app.model = function(file) {
-      return new (app.require_model(file));
-    };
-    return next();
+      app.model = function(file) {
+        return new (app.require_model(file));
+      };
+      app.use(connect.session({
+        key: require(path.join(__dirname, 'package.json')).name + '.sid',
+        secret: "<REPLACE WITH YOUR KEYBOARD CAT HERE>",
+        cookie: {
+          path: '/',
+          maxAge: 1000 * 60 * 30
+        }
+      }));
+      return next();
+    });
   });
 });
 
 flow.serial(function(next) {
-  var SQLStore;
-  app.use(express.cookieParser());
-  app.use(express.bodyParser());
-  app.use(function(req, res, done) {
-    console.log("" + req.method + " \"" + req.url + "\" for " + req.ip + " at " + (Date.create().iso()));
-    if (JSON.stringify(req.body) !== '{}') {
-      console.log("POSTDATA ", req.body);
-    }
-    return done();
+  var LocalStrategy, passport;
+  passport = require('passport');
+  passport.serializeUser(function(user, done) {
+    return done(null, user.id);
   });
-  app.use(express.methodOverride());
-  app.use(express.session({
-    key: require(path.join(__dirname, 'package.json')).name + '.sid',
-    secret: "<REPLACE WITH YOUR KEYBOARD CAT HERE>",
-    cookie: {
-      path: '/',
-      maxAge: 1000 * 60 * 30
-    },
-    store: new (SQLStore = (function(_super) {
-
-      __extends(SQLStore, _super);
-
-      function SQLStore() {
-        return SQLStore.__super__.constructor.apply(this, arguments);
+  passport.deserializeUser(function(id, done) {
+    return app.model('user').find(id, done);
+  });
+  LocalStrategy = require('passport-local').Strategy;
+  passport.use(new LocalStrategy({
+    usernameField: 'auth_key',
+    passwordField: 'password'
+  }, function(auth_key, password, done) {
+    return app.model('user').select('id', 'email', 'password_digest').where({
+      email: auth_key
+    }).first(function(err, user) {
+      return done(err(err ? session.save(function(err) {
+        if (err) {
+          return cb(err);
+        }
+        return cb(null);
+      }) : void 0));
+      if (!user) {
+        return done(null, false, {
+          message: 'Incorrect username.'
+        });
       }
-
-      SQLStore.prototype.get = function(session_id, cb) {
-        return app.model('session').select('data').where({
-          session_id: session_id
-        }).first(function(err, session) {
-          if (err) {
-            return cb(err);
-          }
-          return cb(null, session ? JSON.parse(session.data) : void 0);
+      if (!user.valid_password(password)) {
+        return done(null, false, {
+          message: 'Incorrect password.'
         });
-      };
-
-      SQLStore.prototype.set = function(session_id, data, cb) {
-        var session;
-        session = app.model('session');
-        return session.select('id').where({
-          session_id: session_id
-        }).first(function(err, result) {
-          if (err) {
-            return cb(err);
-          }
-          if (result) {
-            session.id = result.id;
-          }
-          session.session_id = session_id;
-          session.data = JSON.stringify(data);
-          return session.save(function(err) {
-            if (err) {
-              return cb(err);
-            }
-            return cb(null);
-          });
-        });
-      };
-
-      return SQLStore;
-
-    })(express.session.Store))
+      }
+      return done(null, user);
+    });
   }));
-  app.use(require('connect-flash')());
-  app.use(function(req, res, next) {
-    res.locals._csrf = req.session._csrf;
-    res.locals.flash = {
-      alert: req.flash('error'),
-      notice: req.flash('notice')
-    };
-    res.locals.current_user = req.user;
-    return next();
-  });
+  app.passport = passport;
+  app.use(passport.initialize());
+  app.use(passport.session());
   app.require_auth = function(req, res, next) {
     if (req.isAuthenticated()) {
       return next();
     }
     return res.redirect("/");
   };
+  app.use(require('connect-flash')());
+  app.use(function(req, res, next) {
+    res.locals.flash = {
+      alert: req.flash('error'),
+      notice: req.flash('notice')
+    };
+    res.locals.current_user = res.current_user = req.user;
+    return next();
+  });
   return next();
 });
 
-flow.go(function() {
-  require(app.SERVER_CONTROLLERS + 'application')(app);
-  if (typeof cb === 'function') {
-    process.nextTick(function() {
-      return cb(app);
-    });
-    return;
+require_fresh = function(a) {
+  delete require.cache[require.resolve(a)];
+  return require(a);
+};
+
+app.locals(require_fresh(app.SHARED_HELPERS + 'templates'));
+
+app.response.render = function(name, options) {
+  if (options == null) {
+    options = {};
   }
-  return server = app.listen(app.PORT, function() {
-    return console.log("worker " + process.pid + " listening on http://localhost:" + app.PORT + "/");
+  options.view = 'views/' + name;
+  options.layout = 'views/' + app.SERVER_LAYOUTS + (options.layout || 'application');
+  return require('fs').readFile(app.SERVER_VIEWS + 'templates.js', 'utf8', function(err, js) {
+    var k, out;
+    if (err) {
+      return process.stderr.write(err.stack);
+    }
+    eval(js);
+    options.locals = options.locals || {};
+    options.locals.layout = options.layout;
+    for (k in app.response.locals) {
+      options.locals[k] = app.response.locals[k];
+    }
+    out = templates(options.view, options.locals);
+    return app.response.send(out);
   });
+};
+
+flow.serial(function() {
+  return fetch(app.SERVER_CONTROLLERS + 'application', app, this);
 });
+
+flow.serial(function() {
+  return fetch(app.SERVER_CONTROLLERS + 'users', app, this);
+});
+
+flow.serial(function() {
+  return fetch(app.SHARED_CONTROLLERS + 'application', app, this);
+});
+
+flow.serial(function() {
+  return fetch(app.SHARED_CONTROLLERS + 'users', app, this);
+});
+
+module.exports = function(cb) {
+  return app.BOOTSTRAP = cb;
+};
+
+app.bootstrap();
