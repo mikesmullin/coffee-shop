@@ -158,19 +158,6 @@ module.exports = CoffeeShopServer = function() {
   return {
     app: app,
     connect: connect,
-    flow: flow,
-    fetch: function() {
-      var Module, args, cb, file, _i;
-      file = arguments[0], args = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), cb = arguments[_i++];
-      Module = function(c, k, o) {
-        return module.exports = function() {
-          var args;
-          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-          return o;
-        };
-      };
-      require(file).apply(null, args);
-      return cb(null);
-    }
+    flow: flow
   };
 };

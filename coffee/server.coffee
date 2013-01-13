@@ -115,11 +115,5 @@ module.exports = CoffeeShopServer = ->
     app: app
     connect: connect
     flow: flow
-    fetch: (file, args..., cb) ->
-      Module = (c,k,o) ->
-        module.exports = (args...) ->
-          o
-      require(file).apply null, args
-      cb null
   }
 
